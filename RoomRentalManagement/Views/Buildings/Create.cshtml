@@ -1,0 +1,61 @@
+@model RoomRentalManagement.Models.Building
+
+@{
+    ViewData["Title"] = "Thêm tòa nhà";
+}
+
+<h1>Thêm tòa nhà mới</h1>
+
+<hr />
+
+<div class="row">
+    <div class="col-md-6">
+        <form asp-action="Create" method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger"></div>
+
+            <div class="form-group mb-3">
+                <label asp-for="BuildingName" class="control-label">
+                    Tên tòa nhà
+                </label>
+                <input asp-for="BuildingName" class="form-control"
+                       placeholder="Nhập tên tòa nhà" />
+                <span asp-validation-for="BuildingName"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Address" class="control-label">
+                    Địa chỉ
+                </label>
+                <input asp-for="Address" class="form-control"
+                       placeholder="Nhập địa chỉ tòa nhà" />
+                <span asp-validation-for="Address"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Description" class="control-label">
+                    Mô tả
+                </label>
+                <textarea asp-for="Description" class="form-control"
+                          rows="3"
+                          placeholder="Nhập mô tả (nếu có)"></textarea>
+                <span asp-validation-for="Description"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">
+                    Thêm tòa nhà
+                </button>
+
+                <a asp-action="Index" class="btn btn-secondary">
+                    Quay lại
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>

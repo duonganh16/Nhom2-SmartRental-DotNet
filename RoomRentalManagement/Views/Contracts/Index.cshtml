@@ -1,0 +1,175 @@
+
+@model IEnumerable<RoomRentalManagement.Models.Contract>
+
+@{
+    bool isTenant = User.IsInRole("Tenant");
+
+    ViewData["Title"] = isTenant
+        ? "Hợp đồng của tôi"
+        : "Quản lý hợp đồng";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                @(isTenant ? "Hợp đồng của tôi" : "Danh sách hợp đồng")
+            </h2>
+            <p class="text-muted mb-0">
+                @(isTenant
+                    ? "Thông tin hợp đồng thuê phòng của bạn"
+                    : "Quản lý thông tin các hợp đồng thuê phòng")
+            </p>
+        </div>
+
+        @if (User.IsInRole("Admin") || User.IsInRole("Landlord"))
+        {
+            <a asp-action="Create" class="btn btn-primary px-4">
+                <i class="bi bi-plus-circle"></i>
+                Tạo hợp đồng mới
+            </a>
+        }
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            @(isTenant
+                ? "Bạn hiện chưa có hợp đồng thuê phòng nào."
+                : "Hiện chưa có hợp đồng nào trong hệ thống.")
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-3">
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle mb-0">
+
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã HĐ</th>
+                                <th>Phòng</th>
+                                <th>Người thuê</th>
+                                <th>Ngày bắt đầu</th>
+                                <th>Ngày kết thúc</th>
+                                <th>Tiền cọc</th>
+                                <th>Giá thuê</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">
+                                        #@item.ContractID
+                                    </td>
+
+                                    <td>
+                                        @(item.Room?.RoomName ?? $"Phòng #{item.RoomID}")
+                                    </td>
+
+                                    <td>
+                                        @(item.Tenant?.FullName ?? $"Người thuê #{item.TenantID}")
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        @item.StartDate.ToString("dd/MM/yyyy")
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        @(item.EndDate.HasValue
+                                            ? item.EndDate.Value.ToString("dd/MM/yyyy")
+                                            : "Không xác định")
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        @item.Deposit.ToString("N0") VNĐ
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        @item.RentPrice.ToString("N0") VNĐ/tháng
+                                    </td>
+
+                                    <td>
+                                        @if (item.Status == "Active")
+                                        {
+                                            <span class="badge bg-success px-3 py-2">
+                                                Đang hiệu lực
+                                            </span>
+                                        }
+                                        else if (item.Status == "Expired")
+                                        {
+                                            <span class="badge bg-secondary px-3 py-2">
+                                                Đã hết hạn
+                                            </span>
+                                        }
+                                        else if (item.Status == "Terminated")
+                                        {
+                                            <span class="badge bg-warning text-dark px-3 py-2">
+                                                Đã chấm dứt
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                @item.Status
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        @if (!isTenant)
+                                        {
+                                            <a asp-action="Edit"
+                                               asp-route-id="@item.ContractID"
+                                               class="btn btn-sm btn-warning">
+                                                Sửa
+                                            </a>
+                                        }
+
+                                        <a asp-action="Details"
+                                           asp-route-id="@item.ContractID"
+                                           class="btn btn-sm btn-info">
+                                            Chi tiết
+                                        </a>
+
+                                        @if (!isTenant)
+                                        {
+                                            <a asp-action="Delete"
+                                               asp-route-id="@item.ContractID"
+                                               class="btn btn-sm btn-danger">
+                                                Xóa
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>

@@ -1,0 +1,123 @@
+
+@model RoomRentalManagement.Models.Room
+
+@{
+    ViewData["Title"] = "Chi tiết phòng";
+    bool isTenant = User.IsInRole("Tenant");
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Chi tiết phòng</h2>
+            <p class="text-muted mb-0">Thông tin chi tiết phòng trọ</p>
+        </div>
+
+        <span class="badge bg-primary fs-6 px-3 py-2">
+            Phòng @Model.RoomName
+        </span>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-header bg-primary text-white py-3">
+            <h5 class="mb-0">Thông tin phòng trọ</h5>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row g-4">
+
+                <div class="col-md-6">
+                    <div class="border-bottom pb-3">
+                        <small class="text-muted">Mã phòng</small>
+                        <div class="fw-semibold mt-1">
+                            #@Model.RoomID
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="border-bottom pb-3">
+                        <small class="text-muted">Tên phòng</small>
+                        <div class="fw-semibold mt-1">
+                            @Model.RoomName
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="border-bottom pb-3">
+                        <small class="text-muted">Tòa nhà</small>
+                        <div class="fw-semibold mt-1">
+                            @(Model.Building?.BuildingName ?? "Chưa có thông tin")
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="border-bottom pb-3">
+                        <small class="text-muted">Giá thuê</small>
+                        <div class="fw-semibold text-primary mt-1">
+                            @Model.Price.ToString("N0") VNĐ/tháng
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="border-bottom pb-3">
+                        <small class="text-muted">Diện tích</small>
+                        <div class="fw-semibold mt-1">
+                            @Model.Area m²
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="border-bottom pb-3">
+                        <small class="text-muted">Trạng thái</small>
+                        <div class="mt-2">
+                            @if ((Model.Status ?? "").Contains("thuê",
+                                StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="badge bg-danger px-3 py-2">
+                                    Đang thuê
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success px-3 py-2">
+                                    @Model.Status
+                                </span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <small class="text-muted">Mô tả phòng</small>
+                    <p class="mt-2 mb-0">
+                        @(string.IsNullOrWhiteSpace(Model.Description)
+                            ? "Chưa có mô tả."
+                            : Model.Description)
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        @if (!isTenant)
+        {
+            <a asp-action="Edit"
+               asp-route-id="@Model.RoomID"
+               class="btn btn-warning px-4">
+                <i class="bi bi-pencil-square"></i> Sửa
+            </a>
+        }
+
+        <a asp-action="Index"
+           class="btn btn-secondary px-4">
+            Quay lại
+        </a>
+    </div>
+</div>

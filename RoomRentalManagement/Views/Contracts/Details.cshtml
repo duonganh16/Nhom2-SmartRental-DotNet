@@ -1,0 +1,114 @@
+
+@model RoomRentalManagement.Models.Contract
+
+@{
+    ViewData["Title"] = "Chi tiết hợp đồng";
+    bool isTenant = User.IsInRole("Tenant");
+
+    string statusText = Model.Status switch
+    {
+        "Active" => "Đang hiệu lực",
+        "Expired" => "Đã hết hạn",
+        "Terminated" => "Đã chấm dứt",
+        _ => Model.Status
+    };
+
+    string statusClass = Model.Status switch
+    {
+        "Active" => "bg-success",
+        "Expired" => "bg-secondary",
+        "Terminated" => "bg-danger",
+        _ => "bg-info"
+    };
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Chi tiết hợp đồng</h2>
+            <p class="text-muted mb-0">Thông tin hợp đồng #@Model.ContractID</p>
+        </div>
+        <span class="badge @statusClass fs-6 px-3 py-2">
+            @statusText
+        </span>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">Thông tin hợp đồng</h5>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <small class="text-muted">Mã hợp đồng</small>
+                    <div class="fw-semibold">#@Model.ContractID</div>
+                </div>
+
+                <div class="col-md-6">
+                    <small class="text-muted">Phòng trọ</small>
+                    <div class="fw-semibold">
+                        @(Model.Room?.RoomName ?? $"Phòng #{Model.RoomID}")
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <small class="text-muted">Người thuê</small>
+                    <div class="fw-semibold">
+                        @(Model.Tenant?.FullName ?? $"Người thuê #{Model.TenantID}")
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <small class="text-muted">Ngày bắt đầu</small>
+                    <div class="fw-semibold">@Model.StartDate.ToString("dd/MM/yyyy")</div>
+                </div>
+
+                <div class="col-md-6">
+                    <small class="text-muted">Ngày kết thúc</small>
+                    <div class="fw-semibold">
+                        @(Model.EndDate.HasValue
+                            ? Model.EndDate.Value.ToString("dd/MM/yyyy")
+                            : "Không xác định")
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <small class="text-muted">Tiền đặt cọc</small>
+                    <div class="fw-semibold text-primary">
+                        @Model.Deposit.ToString("N0") VNĐ
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <small class="text-muted">Giá thuê mỗi tháng</small>
+                    <div class="fw-semibold text-primary">
+                        @Model.RentPrice.ToString("N0") VNĐ
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <small class="text-muted">Trạng thái hợp đồng</small>
+                    <div>
+                        <span class="badge @statusClass">@statusText</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer bg-white p-3 d-flex gap-2">
+            @if (!isTenant)
+            {
+                <a asp-action="Edit"
+                   asp-route-id="@Model.ContractID"
+                   class="btn btn-primary">
+                    <i class="bi bi-pencil-square"></i> Sửa hợp đồng
+                </a>
+            }
+
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                Quay lại danh sách
+            </a>
+        </div>
+    </div>
+</div>

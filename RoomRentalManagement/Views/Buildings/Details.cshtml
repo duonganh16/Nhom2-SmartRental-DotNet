@@ -1,0 +1,76 @@
+@model RoomRentalManagement.Models.Building
+
+@{
+    ViewData["Title"] = "Chi tiết tòa nhà";
+}
+
+<h1>Chi tiết tòa nhà</h1>
+
+<hr />
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Mã tòa nhà</dt>
+            <dd class="col-sm-9">@Model.BuildingID</dd>
+
+            <dt class="col-sm-3">Tên tòa nhà</dt>
+            <dd class="col-sm-9">@Model.BuildingName</dd>
+
+            <dt class="col-sm-3">Địa chỉ</dt>
+            <dd class="col-sm-9">@Model.Address</dd>
+
+            <dt class="col-sm-3">Mô tả</dt>
+            <dd class="col-sm-9">@Model.Description</dd>
+
+            <dt class="col-sm-3">Chủ nhà</dt>
+            <dd class="col-sm-9">
+                @(Model.Landlord?.FullName ?? "Chưa xác định")
+            </dd>
+
+            <dt class="col-sm-3">Số phòng</dt>
+            <dd class="col-sm-9">
+                @(Model.Rooms?.Count ?? 0)
+            </dd>
+        </dl>
+    </div>
+</div>
+
+<h4>Danh sách phòng thuộc tòa nhà</h4>
+
+@if (Model.Rooms != null && Model.Rooms.Any())
+{
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Mã phòng</th>
+                <th>Tên phòng</th>
+                <th>Giá thuê</th>
+                <th>Diện tích</th>
+                <th>Trạng thái</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var room in Model.Rooms)
+            {
+                <tr>
+                    <td>@room.RoomID</td>
+                    <td>@room.RoomName</td>
+                    <td>@room.Price</td>
+                    <td>@room.Area</td>
+                    <td>@room.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="text-muted">Tòa nhà chưa có phòng nào.</p>
+}
+
+<a asp-action="Edit"
+   asp-route-id="@Model.BuildingID"
+   class="btn btn-primary">Sửa tòa nhà</a>
+
+<a asp-action="Index" class="btn btn-secondary">Quay lại</a>

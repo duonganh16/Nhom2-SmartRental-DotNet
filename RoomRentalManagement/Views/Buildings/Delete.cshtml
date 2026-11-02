@@ -1,0 +1,49 @@
+@model RoomRentalManagement.Models.Building
+
+@{
+    ViewData["Title"] = "Xóa tòa nhà";
+}
+
+<h1>Xóa tòa nhà</h1>
+
+<div class="alert alert-warning">
+    Bạn có chắc chắn muốn xóa tòa nhà này không?
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Mã tòa nhà</dt>
+            <dd class="col-sm-9">@Model.BuildingID</dd>
+
+            <dt class="col-sm-3">Tên tòa nhà</dt>
+            <dd class="col-sm-9">@Model.BuildingName</dd>
+
+            <dt class="col-sm-3">Địa chỉ</dt>
+            <dd class="col-sm-9">@Model.Address</dd>
+
+            <dt class="col-sm-3">Số phòng</dt>
+            <dd class="col-sm-9">@(Model.Rooms?.Count ?? 0)</dd>
+        </dl>
+    </div>
+</div>
+
+@if (Model.Rooms != null && Model.Rooms.Any())
+{
+    <div class="alert alert-danger">
+        Tòa nhà đang có phòng nên không thể xóa.
+        Hãy xử lý các phòng trước.
+    </div>
+}
+
+<form asp-action="Delete" asp-route-id="@Model.BuildingID" method="post">
+    <button type="submit"
+            class="btn btn-danger"
+            disabled="@(Model.Rooms != null && Model.Rooms.Any())">
+        Xác nhận xóa
+    </button>
+
+    <a asp-action="Index" class="btn btn-secondary">
+        Quay lại
+    </a>
+</form>
