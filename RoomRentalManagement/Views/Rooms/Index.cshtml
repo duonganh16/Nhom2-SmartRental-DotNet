@@ -1,0 +1,90 @@
+
+@model IEnumerable<RoomRentalManagement.Models.Room>
+
+@{
+    ViewData["Title"] = User.IsInRole("Tenant")
+        ? "Phòng đang thuê"
+        : "Danh sách phòng";
+    bool isTenant = User.IsInRole("Tenant");
+}
+
+<h1>@ViewData["Title"]</h1>
+
+@if (!isTenant)
+{
+    <p>
+        <a asp-action="Create" class="btn btn-primary">
+            Thêm phòng mới
+        </a>
+    </p>
+}
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info">
+        Bạn hiện chưa có phòng nào đang thuê.
+        Vui lòng liên hệ chủ trọ nếu thông tin này chưa chính xác.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Mã phòng</th>
+                    <th>Tên phòng</th>
+                    <th>Tòa nhà</th>
+                    <th>Giá thuê</th>
+                    <th>Diện tích</th>
+                    <th>Trạng thái</th>
+                    <th>Mô tả</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.RoomID</td>
+                        <td>@item.RoomName</td>
+                        <td>
+                            @(item.Building?.BuildingName ?? "Chưa có tòa nhà")
+                        </td>
+                        <td>@item.Price.ToString("N0") VNĐ</td>
+                        <td>@item.Area m²</td>
+                        <td>
+                            <span class="badge bg-success">
+                                @item.Status
+                            </span>
+                        </td>
+                        <td>@item.Description</td>
+                        <td>
+                            <a asp-action="Details"
+                               asp-route-id="@item.RoomID"
+                               class="btn btn-sm btn-info">
+                                Chi tiết
+                            </a>
+
+                            @if (!isTenant)
+                            {
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.RoomID"
+                                   class="btn btn-sm btn-warning">
+                                    Sửa
+                                </a>
+
+                                <a asp-action="Delete"
+                                   asp-route-id="@item.RoomID"
+                                   class="btn btn-sm btn-danger">
+                                    Xóa
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

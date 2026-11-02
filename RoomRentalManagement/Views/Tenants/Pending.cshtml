@@ -1,0 +1,86 @@
+@model IEnumerable<RoomRentalManagement.Models.Tenant>
+
+@{
+    ViewData["Title"] = "Hồ sơ người thuê chờ duyệt";
+}
+
+<h1>Hồ sơ người thuê chờ duyệt</h1>
+
+<p class="text-muted">
+    Danh sách hồ sơ do chủ trọ gửi lên, đang chờ Admin kiểm tra.
+</p>
+
+@if (Model.Any())
+{
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Mã hồ sơ</th>
+                <th>Họ tên</th>
+                <th>Số điện thoại</th>
+                <th>CCCD</th>
+                <th>Ngày sinh</th>
+                <th>Địa chỉ</th>
+                <th>Chủ trọ tạo hồ sơ</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.TenantID</td>
+                    <td>@item.FullName</td>
+                    <td>@item.Phone</td>
+                    <td>@item.CCCD</td>
+                    <td>@item.DateOfBirth?.ToString("dd/MM/yyyy")</td>
+                    <td>@item.Address</td>
+                    <td>@(item.Landlord?.FullName ?? "Không xác định")</td>
+                    <td>
+    <span class="badge bg-warning text-dark">
+        Chờ duyệt
+    </span>
+</td>
+
+<td>
+    <form asp-action="ApproveProfile"
+          asp-route-id="@item.TenantID"
+          method="post"
+          class="d-inline">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-success btn-sm">
+            Duyệt
+        </button>
+    </form>
+
+    <form asp-action="RejectProfile"
+          asp-route-id="@item.TenantID"
+          method="post"
+          class="d-inline">
+        @Html.AntiForgeryToken()
+        <button type="submit"
+                class="btn btn-danger btn-sm"
+                onclick="return confirm('Bạn có chắc muốn từ chối hồ sơ này?')">
+            Từ chối
+        </button>
+    </form>
+</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="alert alert-info">
+        Hiện chưa có hồ sơ người thuê nào chờ duyệt.
+    </div>
+}
+
+<a asp-controller="Users"
+   asp-action="Index"
+   class="btn btn-secondary">
+    Quay lại quản lý tài khoản
+</a>

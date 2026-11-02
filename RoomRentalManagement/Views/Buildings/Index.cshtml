@@ -1,0 +1,54 @@
+@model IEnumerable<RoomRentalManagement.Models.Building>
+
+@{
+    ViewData["Title"] = "Danh sách tòa nhà";
+}
+
+<h1>Danh sách tòa nhà</h1>
+
+<p>
+    @if (User.IsInRole("Landlord"))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            Thêm tòa nhà mới
+        </a>
+    }
+</p>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Mã tòa nhà</th>
+            <th>Tên tòa nhà</th>
+            <th>Địa chỉ</th>
+            <th>Mô tả</th>
+            <th>Số phòng</th>
+            <th>Chủ nhà</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.BuildingID</td>
+                <td>@item.BuildingName</td>
+                <td>@item.Address</td>
+                <td>@item.Description</td>
+                <td>@(item.Rooms?.Count ?? 0)</td>
+                <td>@(item.Landlord?.FullName ?? "Chưa xác định")</td>
+                <td>
+                    <a asp-action="Details"
+                       asp-route-id="@item.BuildingID">Chi tiết</a>
+                    |
+                    <a asp-action="Edit"
+                       asp-route-id="@item.BuildingID">Sửa</a>
+                    |
+                    <a asp-action="Delete"
+                       asp-route-id="@item.BuildingID">Xóa</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

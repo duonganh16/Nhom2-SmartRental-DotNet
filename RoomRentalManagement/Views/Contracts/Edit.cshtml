@@ -1,0 +1,231 @@
+
+@model RoomRentalManagement.Models.Contract
+
+@{
+    ViewData["Title"] = "Sửa hợp đồng";
+    var selectedBuildingID = ViewBag.SelectedBuildingID;
+}
+
+<h1>Sửa hợp đồng #@Model.ContractID</h1>
+<hr />
+
+<div class="row">
+    <div class="col-md-7 col-lg-6">
+
+        <form asp-action="Edit"
+              asp-route-id="@Model.ContractID"
+              method="post">
+
+            <input type="hidden" asp-for="ContractID" />
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger mb-3"></div>
+
+            <!-- Chọn tòa nhà -->
+            <div class="mb-3">
+                <label class="form-label">Tòa nhà</label>
+
+                <select id="BuildingID"
+                        name="buildingId"
+                        asp-items="ViewBag.BuildingID"
+                        class="form-select"
+                        required>
+                    <option value="">-- Chọn tòa nhà --</option>
+                </select>
+
+                <span class="text-danger" id="buildingError"></span>
+            </div>
+
+            <!-- Chọn phòng -->
+            <div class="mb-3">
+                <label asp-for="RoomID" class="form-label">
+                    Phòng trọ
+                </label>
+
+                <select asp-for="RoomID"
+                        asp-items="ViewBag.RoomID"
+                        class="form-select"
+                        id="RoomID"
+                        required>
+                    <option value="">-- Chọn phòng --</option>
+                </select>
+
+                <span asp-validation-for="RoomID"
+                      class="text-danger"></span>
+            </div>
+
+            <!-- Chọn người thuê -->
+            <div class="mb-3">
+                <label asp-for="TenantID" class="form-label">
+                    Người thuê
+                </label>
+
+                <select asp-for="TenantID"
+                        asp-items="ViewBag.TenantID"
+                        class="form-select"
+                        required>
+                    <option value="">-- Chọn người thuê --</option>
+                </select>
+
+                <span asp-validation-for="TenantID"
+                      class="text-danger"></span>
+            </div>
+
+            <!-- Ngày bắt đầu -->
+            <div class="mb-3">
+                <label asp-for="StartDate" class="form-label">
+                    Ngày bắt đầu
+                </label>
+
+                <input asp-for="StartDate"
+                       type="date"
+                       class="form-control" />
+
+                <span asp-validation-for="StartDate"
+                      class="text-danger"></span>
+            </div>
+
+            <!-- Ngày kết thúc -->
+            <div class="mb-3">
+                <label asp-for="EndDate" class="form-label">
+                    Ngày kết thúc (không bắt buộc)
+                </label>
+
+                <input asp-for="EndDate"
+                       type="date"
+                       class="form-control" />
+
+                <span asp-validation-for="EndDate"
+                      class="text-danger"></span>
+            </div>
+
+            <!-- Tiền đặt cọc -->
+            <div class="mb-3">
+                <label asp-for="Deposit" class="form-label">
+                    Tiền đặt cọc (VNĐ)
+                </label>
+
+                <input asp-for="Deposit"
+                       type="number"
+                       min="0"
+                       step="1000"
+                       class="form-control" />
+
+                <span asp-validation-for="Deposit"
+                      class="text-danger"></span>
+            </div>
+
+            <!-- Giá thuê -->
+            <div class="mb-3">
+                <label asp-for="RentPrice" class="form-label">
+                    Giá thuê mỗi tháng (VNĐ)
+                </label>
+
+                <input asp-for="RentPrice"
+                       type="number"
+                       min="1"
+                       step="1000"
+                       class="form-control" />
+
+                <span asp-validation-for="RentPrice"
+                      class="text-danger"></span>
+            </div>
+
+            <!-- Trạng thái -->
+            <div class="mb-3">
+                <label asp-for="Status" class="form-label">
+                    Trạng thái
+                </label>
+
+                <select asp-for="Status" class="form-select">
+                    <option value="Active">Đang hiệu lực</option>
+                    <option value="Expired">Đã hết hạn</option>
+                    <option value="Terminated">Đã chấm dứt</option>
+                </select>
+
+                <span asp-validation-for="Status"
+                      class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                Lưu thay đổi
+            </button>
+
+            <a asp-action="Index" class="btn btn-secondary">
+                Quay lại
+            </a>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const buildingSelect =
+                document.getElementById("BuildingID");
+
+            const roomSelect =
+                document.getElementById("RoomID");
+
+            buildingSelect.addEventListener("change", async function () {
+
+                const buildingId = this.value;
+
+                roomSelect.innerHTML =
+                    '<option value="">-- Đang tải danh sách phòng --</option>';
+
+                roomSelect.disabled = true;
+
+                if (!buildingId) {
+                    roomSelect.innerHTML =
+                        '<option value="">-- Chọn tòa nhà trước --</option>';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(
+                        '@Url.Action("GetAvailableRooms", "Contracts")?buildingId='
+                        + encodeURIComponent(buildingId)
+                    );
+
+                    if (!response.ok) {
+                        throw new Error("Không thể tải danh sách phòng.");
+                    }
+
+                    const rooms = await response.json();
+
+                    roomSelect.innerHTML =
+                        '<option value="">-- Chọn phòng --</option>';
+
+                    if (rooms.length === 0) {
+                        roomSelect.innerHTML =
+                            '<option value="">-- Tòa nhà không còn phòng trống --</option>';
+                        return;
+                    }
+
+                    rooms.forEach(function (room) {
+                        const option = document.createElement("option");
+
+                        option.value = room.roomID;
+                        option.textContent = room.roomName;
+
+                        roomSelect.appendChild(option);
+                    });
+
+                    roomSelect.disabled = false;
+
+                } catch (error) {
+                    roomSelect.innerHTML =
+                        '<option value="">-- Lỗi tải danh sách phòng --</option>';
+
+                    console.error(error);
+                }
+            });
+
+        });
+    </script>
+}

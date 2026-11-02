@@ -1,0 +1,68 @@
+@model RoomRentalManagement.Models.Tenant
+
+@{
+    ViewData["Title"] = "Cấp tài khoản người thuê";
+}
+
+<h1>Cấp tài khoản người thuê</h1>
+
+<hr />
+
+<div class="card shadow-sm" style="max-width: 650px;">
+    <div class="card-body">
+
+        <div class="alert alert-info">
+            Admin đang cấp tài khoản cho hồ sơ người thuê đã được duyệt.
+        </div>
+
+        <h5>Thông tin người thuê</h5>
+
+        <p><strong>Mã hồ sơ:</strong> @Model.TenantID</p>
+        <p><strong>Họ tên:</strong> @Model.FullName</p>
+        <p><strong>Số điện thoại:</strong> @Model.Phone</p>
+        <p><strong>CCCD:</strong> @Model.CCCD</p>
+
+        <hr />
+
+        <form asp-action="CreateAccount"
+              asp-route-id="@Model.TenantID"
+              method="post">
+
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="All"
+                 class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label class="form-label">Tên đăng nhập</label>
+                <input name="username"
+                       class="form-control"
+                       required
+                       autocomplete="off"
+                       placeholder="Nhập tên đăng nhập" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Mật khẩu</label>
+                <input name="password"
+                       type="password"
+                       class="form-control"
+                       required
+                       minlength="10"
+                       autocomplete="new-password"
+                       placeholder="Nhập mật khẩu ít nhất 10 ký tự" />
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                Tạo tài khoản
+            </button>
+
+            <a asp-action="Details"
+               asp-route-id="@Model.TenantID"
+               class="btn btn-secondary">
+                Quay lại
+            </a>
+
+        </form>
+    </div>
+</div>
