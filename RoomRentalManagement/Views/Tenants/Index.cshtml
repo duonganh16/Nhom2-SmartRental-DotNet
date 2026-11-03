@@ -1,58 +1,433 @@
+
 @model IEnumerable<RoomRentalManagement.Models.Tenant>
 
 @{
     ViewData["Title"] = "Quản lý người thuê";
+
+    var tenants = Model?.ToList() ?? new List<RoomRentalManagement.Models.Tenant>();
+    var totalTenants = tenants.Count;
+    var tenantsWithPhone = tenants.Count(x => !string.IsNullOrWhiteSpace(x.Phone));
+    var tenantsWithAddress = tenants.Count(x => !string.IsNullOrWhiteSpace(x.Address));
+
+    var isManager = User.IsInRole("Admin") || User.IsInRole("Landlord");
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Danh sách người thuê</h1>
-    <a asp-action="Create" class="btn btn-primary">Thêm người thuê</a>
+<style>
+    body {
+        background: #f4f6fb;
+    }
+
+    .tenant-page {
+        padding: 10px 5px 30px;
+    }
+
+    .page-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+
+    .page-heading h2 {
+        color: #1e293b;
+        font-weight: 700;
+        margin: 0;
+        font-size: 27px;
+    }
+
+    .page-subtitle {
+        color: #64748b;
+        margin-top: 6px;
+        font-size: 14px;
+    }
+
+    .btn-add {
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 9px;
+        padding: 11px 18px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .btn-add:hover {
+        background: #1d4ed8;
+        color: white;
+    }
+
+    .tenant-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 22px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 13px;
+        padding: 19px;
+        border: 1px solid #e8edf5;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, .035);
+    }
+
+    .stat-label {
+        color: #64748b;
+        font-size: 13px;
+        margin-bottom: 9px;
+    }
+
+    .stat-value {
+        color: #1e293b;
+        font-size: 27px;
+        font-weight: 700;
+    }
+
+    .stat-icon {
+        float: right;
+        width: 39px;
+        height: 39px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #eff6ff;
+        font-size: 19px;
+    }
+
+    .tenant-panel {
+        background: white;
+        border-radius: 14px;
+        border: 1px solid #e8edf5;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, .035);
+        overflow: hidden;
+    }
+
+    .panel-header {
+        padding: 20px 22px;
+        border-bottom: 1px solid #edf0f5;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .panel-header h5 {
+        margin: 0;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .search-box {
+        max-width: 320px;
+        width: 100%;
+        position: relative;
+    }
+
+    .search-box input {
+        width: 100%;
+        border: 1px solid #dbe2ea;
+        border-radius: 8px;
+        padding: 9px 12px 9px 36px;
+        outline: none;
+    }
+
+    .search-box input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, .1);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 9px;
+        color: #94a3b8;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .tenant-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 850px;
+        margin: 0;
+    }
+
+    .tenant-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e8edf5;
+        white-space: nowrap;
+    }
+
+    .tenant-table tbody td {
+        padding: 15px 16px;
+        border-bottom: 1px solid #f0f2f6;
+        color: #334155;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .tenant-table tbody tr:hover {
+        background: #f8fbff;
+    }
+
+    .tenant-id {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .tenant-name {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .action-links {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        white-space: nowrap;
+    }
+
+    .action-links a {
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .link-details {
+        color: #2563eb;
+    }
+
+    .link-edit {
+        color: #d97706;
+    }
+
+    .link-delete {
+        color: #dc2626;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 45px 15px !important;
+        color: #94a3b8 !important;
+    }
+
+    .result-count {
+        padding: 14px 22px;
+        color: #64748b;
+        font-size: 13px;
+        border-top: 1px solid #edf0f5;
+    }
+
+    .alert {
+        border-radius: 9px;
+    }
+
+    @@media (max-width: 768px) {
+        .tenant-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .page-heading h2 {
+            font-size: 23px;
+        }
+
+        .panel-header {
+            align-items: stretch;
+        }
+
+        .search-box {
+            max-width: 100%;
+        }
+    }
+</style>
+
+<div class="tenant-page">
+
+    <div class="page-heading">
+        <div>
+            <h2>Quản lý người thuê</h2>
+            <div class="page-subtitle">
+                Theo dõi và quản lý thông tin người thuê phòng
+            </div>
+        </div>
+
+        @if (isManager)
+        {
+            <a asp-action="Create" class="btn-add">
+                <span>＋</span> Thêm người thuê
+            </a>
+        }
+    </div>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @success
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @error
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="tenant-stats">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-label">Tổng số người thuê</div>
+            <div class="stat-value">@totalTenants</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">📞</div>
+            <div class="stat-label">Có số điện thoại</div>
+            <div class="stat-value">@tenantsWithPhone</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">📍</div>
+            <div class="stat-label">Có thông tin địa chỉ</div>
+            <div class="stat-value">@tenantsWithAddress</div>
+        </div>
+    </div>
+
+    <div class="tenant-panel">
+        <div class="panel-header">
+            <h5>Danh sách người thuê</h5>
+
+            <div class="search-box">
+                <span class="search-icon">⌕</span>
+                <input type="text"
+                       id="tenantSearch"
+                       placeholder="Tìm theo tên, SĐT, CCCD..."
+                       autocomplete="off" />
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="tenant-table">
+                <thead>
+                    <tr>
+                        <th>Mã người thuê</th>
+                        <th>Họ và tên</th>
+                        <th>Số điện thoại</th>
+                        <th>CCCD</th>
+                        <th>Ngày sinh</th>
+                        <th>Địa chỉ</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tenantTableBody">
+                    @if (!tenants.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                Chưa có thông tin người thuê nào.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var tenant in tenants)
+                        {
+                            <tr class="tenant-row">
+                                <td>
+                                    <span class="tenant-id">#@tenant.TenantID</span>
+                                </td>
+
+                                <td>
+                                    <span class="tenant-name">@tenant.FullName</span>
+                                </td>
+
+                                <td>@(string.IsNullOrWhiteSpace(tenant.Phone) ? "—" : tenant.Phone)</td>
+
+                                <td>@(string.IsNullOrWhiteSpace(tenant.CCCD) ? "—" : tenant.CCCD)</td>
+
+                                <td>@(tenant.DateOfBirth?.ToString("dd/MM/yyyy") ?? "—")</td>
+
+                                <td>@(string.IsNullOrWhiteSpace(tenant.Address) ? "—" : tenant.Address)</td>
+
+                                <td>
+                                    <div class="action-links">
+                                        <a asp-action="Details"
+                                           asp-route-id="@tenant.TenantID"
+                                           class="link-details">Chi tiết</a>
+
+                                        @if (isManager)
+                                        {
+                                            <a asp-action="Edit"
+                                               asp-route-id="@tenant.TenantID"
+                                               class="link-edit">Sửa</a>
+
+                                            <a asp-action="Delete"
+                                               asp-route-id="@tenant.TenantID"
+                                               class="link-delete">Xóa</a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+
+                    <tr id="noSearchResult" style="display:none;">
+                        <td colspan="7" class="empty-state">
+                            Không tìm thấy người thuê phù hợp.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="result-count">
+            Tổng cộng <strong>@totalTenants</strong> người thuê
+        </div>
+    </div>
 </div>
 
-@if (TempData["Success"] is string success)
-{
-    <div class="alert alert-success">@success</div>
-}
-@if (TempData["Error"] is string error)
-{
-    <div class="alert alert-danger">@error</div>
-}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("tenantSearch");
+        const rows = document.querySelectorAll(".tenant-row");
+        const noResult = document.getElementById("noSearchResult");
 
-<table class="table table-bordered table-striped align-middle">
-    <thead>
-        <tr>
-            <th>Mã người thuê</th>
-            <th>Họ tên</th>
-            <th>Số điện thoại</th>
-            <th>CCCD</th>
-            <th>Ngày sinh</th>
-            <th>Địa chỉ</th>
-            <th>Thao tác</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if (!Model.Any())
-        {
-            <tr><td colspan="7" class="text-center">Chưa có người thuê nào.</td></tr>
-        }
-        else
-        {
-            @foreach (var tenant in Model)
-            {
-                <tr>
-                    <td>@tenant.TenantID</td>
-                    <td>@tenant.FullName</td>
-                    <td>@tenant.Phone</td>
-                    <td>@tenant.CCCD</td>
-                    <td>@(tenant.DateOfBirth?.ToString("dd/MM/yyyy") ?? "—")</td>
-                    <td>@(string.IsNullOrWhiteSpace(tenant.Address) ? "—" : tenant.Address)</td>
-                    <td>
-                        <a asp-action="Edit" asp-route-id="@tenant.TenantID">Sửa</a> |
-                        <a asp-action="Details" asp-route-id="@tenant.TenantID">Chi tiết</a> |
-                        <a asp-action="Delete" asp-route-id="@tenant.TenantID">Xóa</a>
-                    </td>
-                </tr>
+        if (!searchInput) return;
+
+        searchInput.addEventListener("input", function () {
+            const keyword = this.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            rows.forEach(function (row) {
+                const text = row.innerText.toLowerCase();
+                const matched = text.includes(keyword);
+
+                row.style.display = matched ? "" : "none";
+
+                if (matched) visibleCount++;
+            });
+
+            if (noResult) {
+                noResult.style.display =
+                    visibleCount === 0 && rows.length > 0 ? "" : "none";
             }
-        }
-    </tbody>
-</table>
+        });
+    });
+</script>

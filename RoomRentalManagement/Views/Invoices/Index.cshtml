@@ -1,84 +1,553 @@
+
 @model IEnumerable<RoomRentalManagement.Models.Invoice>
 
 @{
     ViewData["Title"] = "Quản lý hóa đơn";
+
+    var invoices = Model?.ToList() ?? new List<RoomRentalManagement.Models.Invoice>();
+
+    bool isManager = User.IsInRole("Admin") || User.IsInRole("Landlord");
+    bool isTenant = User.IsInRole("Tenant");
+
+    var totalInvoices = invoices.Count;
+    var totalAmount = invoices.Sum(x => x.Total);
+    var paidInvoices = invoices.Count(x => x.Status == "Paid");
+    var unpaidInvoices = invoices.Count(x => x.Status != "Paid");
+
+    var paidAmount = invoices
+        .Where(x => x.Status == "Paid")
+        .Sum(x => x.Total);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Danh sách hóa đơn</h1>
-    <a asp-action="Create" class="btn btn-primary">Tạo hóa đơn</a>
+<style>
+    .invoice-page {
+        padding: 24px;
+        background: #f5f7fb;
+        min-height: calc(100vh - 160px);
+    }
+
+    .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .invoice-title {
+        font-size: 27px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 5px;
+    }
+
+    .invoice-subtitle {
+        color: #8492a6;
+        font-size: 14px;
+    }
+
+    .invoice-create-btn {
+        background: #2563eb;
+        color: white;
+        padding: 11px 19px;
+        border-radius: 9px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+    .invoice-create-btn:hover {
+        background: #1d4ed8;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .invoice-stat {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 20px;
+        height: 100%;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .stat-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-label {
+        color: #8492a6;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .stat-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 11px;
+        font-size: 20px;
+    }
+
+    .stat-number {
+        font-size: 24px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-top: 15px;
+    }
+
+    .stat-note {
+        color: #98a2b3;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .invoice-panel {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 22px;
+        margin-top: 25px;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #172b4d;
+    }
+
+    .invoice-search {
+        width: 320px;
+        max-width: 100%;
+        border-radius: 8px;
+        padding: 10px 13px;
+        border: 1px solid #dce2ea;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .invoice-search:focus,
+    .invoice-filter:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+
+    .invoice-filter {
+        padding: 10px 12px;
+        border: 1px solid #dce2ea;
+        border-radius: 8px;
+        background: white;
+        color: #475569;
+        font-size: 13px;
+    }
+
+    .invoice-table {
+        width: 100%;
+        min-width: 1100px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .invoice-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 15px 12px;
+        border-bottom: 1px solid #e8edf3;
+        white-space: nowrap;
+    }
+
+    .invoice-table tbody td {
+        padding: 15px 12px;
+        border-bottom: 1px solid #edf0f5;
+        font-size: 13px;
+        color: #475569;
+        vertical-align: middle;
+    }
+
+    .invoice-table tbody tr:hover {
+        background: #f8fbff;
+    }
+
+    .invoice-id {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .invoice-total {
+        color: #059669 !important;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .invoice-status {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .status-paid {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-overdue {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .status-unpaid {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .invoice-actions {
+        display: flex;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .invoice-actions .btn {
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .invoice-empty {
+        text-align: center;
+        padding: 45px 15px !important;
+        color: #94a3b8 !important;
+    }
+
+    @@media(max-width: 768px) {
+        .invoice-page {
+            padding: 14px;
+        }
+
+        .invoice-title {
+            font-size: 22px;
+        }
+
+        .invoice-panel {
+            padding: 14px;
+        }
+
+        .invoice-search {
+            width: 100%;
+        }
+
+        .invoice-header {
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<div class="invoice-page">
+
+    <!-- TIÊU ĐỀ -->
+    <div class="invoice-header">
+        <div>
+            <h1 class="invoice-title">
+                @(isTenant ? "Hóa đơn của tôi" : "Quản lý hóa đơn")
+            </h1>
+
+            <div class="invoice-subtitle">
+                Theo dõi, quản lý hóa đơn tiền phòng và chi phí dịch vụ.
+            </div>
+        </div>
+
+        @if (isManager)
+        {
+            <a asp-action="Create" class="invoice-create-btn">
+                + Tạo hóa đơn
+            </a>
+        }
+    </div>
+
+    <!-- THÔNG BÁO -->
+    @if (TempData["Success"] is string success)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            ✓ @success
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @error
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- THỐNG KÊ -->
+    <div class="row g-3">
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="invoice-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng hóa đơn</span>
+                    <span class="stat-icon" style="background:#eff6ff;color:#2563eb;">▤</span>
+                </div>
+                <div class="stat-number">@totalInvoices</div>
+                <div class="stat-note">Tổng số hóa đơn hiện có</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="invoice-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng giá trị hóa đơn</span>
+                    <span class="stat-icon" style="background:#f0fdf4;color:#16a34a;">₫</span>
+                </div>
+                <div class="stat-number">@totalAmount.ToString("N0") đ</div>
+                <div class="stat-note">Tổng tiền tất cả hóa đơn</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="invoice-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Đã thanh toán</span>
+                    <span class="stat-icon" style="background:#dcfce7;color:#15803d;">✓</span>
+                </div>
+                <div class="stat-number" style="color:#16a34a;">@paidInvoices</div>
+                <div class="stat-note">Đã thu: @paidAmount.ToString("N0") đ</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="invoice-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Chưa thanh toán / Quá hạn</span>
+                    <span class="stat-icon" style="background:#fff1f2;color:#e11d48;">!</span>
+                </div>
+                <div class="stat-number" style="color:#e11d48;">@unpaidInvoices</div>
+                <div class="stat-note">Hóa đơn chưa ở trạng thái đã thanh toán</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- BẢNG HÓA ĐƠN -->
+    <div class="invoice-panel">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+
+            <div class="panel-title">
+                Danh sách hóa đơn
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <input type="text"
+                       id="invoiceSearch"
+                       class="invoice-search"
+                       placeholder="⌕ Tìm mã HĐ, phòng, người thuê..." />
+
+                <select id="statusFilter" class="invoice-filter">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="paid">Đã thanh toán</option>
+                    <option value="unpaid">Chưa thanh toán</option>
+                    <option value="overdue">Quá hạn</option>
+                </select>
+            </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="invoice-table" id="invoiceTable">
+
+                <thead>
+                    <tr>
+                        <th>Mã hóa đơn</th>
+                        <th>Kỳ hóa đơn</th>
+                        <th>Phòng</th>
+
+                        @if (!isTenant)
+                        {
+                            <th>Người thuê</th>
+                        }
+
+                        <th>Tiền thuê</th>
+                        <th>Điện</th>
+                        <th>Nước</th>
+                        <th>Phí dịch vụ</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @if (invoices.Any())
+                    {
+                        @foreach (var item in invoices)
+                        {
+                            var electricUsage = item.ElectricNew - item.ElectricOld;
+                            var waterUsage = item.WaterNew - item.WaterOld;
+
+                            var statusLabel = item.Status switch
+                            {
+                                "Paid" => "Đã thanh toán",
+                                "Overdue" => "Quá hạn",
+                                _ => "Chưa thanh toán"
+                            };
+
+                            var badgeClass = item.Status switch
+                            {
+                                "Paid" => "status-paid",
+                                "Overdue" => "status-overdue",
+                                _ => "status-unpaid"
+                            };
+
+                            var filterStatus = item.Status switch
+                            {
+                                "Paid" => "paid",
+                                "Overdue" => "overdue",
+                                _ => "unpaid"
+                            };
+
+                            <tr data-status="@filterStatus">
+
+                                <td>
+                                    <span class="invoice-id">#@item.InvoiceID</span>
+                                </td>
+
+                                <td>
+                                    <strong>@item.BillingMonth.ToString("MM/yyyy")</strong>
+                                </td>
+
+                                <td>
+                                    <strong>@(item.Contract?.Room?.RoomName ?? "—")</strong>
+                                </td>
+
+                                @if (!isTenant)
+                                {
+                                    <td>
+                                        @(item.Contract?.Tenant?.FullName ?? "—")
+                                    </td>
+                                }
+
+                                <td class="text-nowrap">
+                                    @item.RentAmount.ToString("N0") đ
+                                </td>
+
+                                <td class="text-nowrap">
+                                    @electricUsage.ToString("N2")
+                                </td>
+
+                                <td class="text-nowrap">
+                                    @waterUsage.ToString("N2")
+                                </td>
+
+                                <td class="text-nowrap">
+                                    @item.ServiceFee.ToString("N0") đ
+                                </td>
+
+                                <td class="invoice-total">
+                                    @item.Total.ToString("N0") đ
+                                </td>
+
+                                <td>
+                                    <span class="invoice-status @badgeClass">
+                                        @statusLabel
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="invoice-actions">
+
+                                        <a asp-action="Details"
+                                           asp-route-id="@item.InvoiceID"
+                                           class="btn btn-sm btn-outline-info">
+                                            Chi tiết
+                                        </a>
+
+                                        @if (isManager)
+                                        {
+                                            <a asp-action="Edit"
+                                               asp-route-id="@item.InvoiceID"
+                                               class="btn btn-sm btn-outline-primary">
+                                                Sửa
+                                            </a>
+
+                                            <a asp-action="Delete"
+                                               asp-route-id="@item.InvoiceID"
+                                               class="btn btn-sm btn-outline-danger">
+                                                Xóa
+                                            </a>
+                                        }
+
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="11" class="invoice-empty">
+                                <div style="font-size:38px;">📄</div>
+                                <div class="fw-bold mt-2">
+                                    Chưa có hóa đơn nào
+                                </div>
+                                <div class="small mt-1">
+                                    Hóa đơn sẽ được hiển thị tại đây.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+            </table>
+
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+            <span class="small text-muted">
+                Tổng cộng: <strong>@totalInvoices</strong> hóa đơn
+            </span>
+
+            <span class="small text-muted">
+                SmartRental - Quản lý nhà trọ
+            </span>
+        </div>
+
+    </div>
+
 </div>
 
-@if (TempData["Success"] is string success)
-{
-    <div class="alert alert-success">@success</div>
-}
-@if (TempData["Error"] is string error)
-{
-    <div class="alert alert-danger">@error</div>
-}
+<script>
+    const invoiceSearch = document.getElementById("invoiceSearch");
+    const statusFilter = document.getElementById("statusFilter");
 
-<div class="table-responsive">
-    <table class="table table-bordered table-striped align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Mã HĐ</th>
-                <th>Tháng</th>
-                <th>Phòng</th>
-                <th>Người thuê</th>
-                <th>Tiền thuê</th>
-                <th>Điện</th>
-                <th>Nước</th>
-                <th>Phí dịch vụ</th>
-                <th>Tổng tiền</th>
-                <th>Trạng thái</th>
-                <th style="min-width: 180px;">Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-        @if (Model.Any())
-        {
-            @foreach (var item in Model)
-            {
-                var electricUsage = item.ElectricNew - item.ElectricOld;
-                var waterUsage = item.WaterNew - item.WaterOld;
-                var statusLabel = item.Status switch
-                {
-                    "Paid" => "Đã thanh toán",
-                    "Overdue" => "Quá hạn",
-                    _ => "Chưa thanh toán"
-                };
-                var badgeClass = item.Status switch
-                {
-                    "Paid" => "bg-success",
-                    "Overdue" => "bg-danger",
-                    _ => "bg-warning text-dark"
-                };
-                <tr>
-                    <td>@item.InvoiceID</td>
-                    <td>@item.BillingMonth.ToString("MM/yyyy")</td>
-                    <td>@(item.Contract?.Room?.RoomName ?? "-")</td>
-                    <td>@(item.Contract?.Tenant?.FullName ?? "-")</td>
-                    <td>@item.RentAmount.ToString("N0")</td>
-                    <td>@electricUsage.ToString("N2")</td>
-                    <td>@waterUsage.ToString("N2")</td>
-                    <td>@item.ServiceFee.ToString("N0")</td>
-                    <td><strong>@item.Total.ToString("N0")</strong></td>
-                    <td><span class="badge @badgeClass">@statusLabel</span></td>
-                    <td>
-                        <a asp-action="Details" asp-route-id="@item.InvoiceID">Chi tiết</a> |
-                        <a asp-action="Edit" asp-route-id="@item.InvoiceID">Sửa</a> |
-                        <a asp-action="Delete" asp-route-id="@item.InvoiceID">Xóa</a>
-                    </td>
-                </tr>
-            }
-        }
-        else
-        {
-            <tr>
-                <td colspan="11" class="text-center">Chưa có hóa đơn nào.</td>
-            </tr>
-        }
-        </tbody>
-    </table>
-</div>
+    function filterInvoices() {
+        const keyword = invoiceSearch.value.toLowerCase().trim();
+        const status = statusFilter.value;
+
+        document.querySelectorAll("#invoiceTable tbody tr[data-status]")
+            .forEach(row => {
+                const matchesKeyword = row.innerText.toLowerCase().includes(keyword);
+                const matchesStatus = !status || row.dataset.status === status;
+
+                row.style.display = matchesKeyword && matchesStatus ? "" : "none";
+            });
+    }
+
+    invoiceSearch.addEventListener("input", filterInvoices);
+    statusFilter.addEventListener("change", filterInvoices);
+</script>

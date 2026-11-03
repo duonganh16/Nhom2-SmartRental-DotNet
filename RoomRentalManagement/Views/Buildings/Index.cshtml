@@ -1,54 +1,451 @@
+
 @model IEnumerable<RoomRentalManagement.Models.Building>
 
 @{
-    ViewData["Title"] = "Danh sách tòa nhà";
+    ViewData["Title"] = "Quản lý tòa nhà";
+
+    var buildings = Model?.ToList() ?? new List<RoomRentalManagement.Models.Building>();
+
+    bool isManager = User.IsInRole("Admin") || User.IsInRole("Landlord");
+
+    var totalBuildings = buildings.Count;
+    var totalRooms = buildings.Sum(x => x.Rooms?.Count ?? 0);
+    var averageRooms = totalBuildings > 0
+        ? (double)totalRooms / totalBuildings
+        : 0;
 }
 
-<h1>Danh sách tòa nhà</h1>
-
-<p>
-    @if (User.IsInRole("Landlord"))
-    {
-        <a asp-action="Create" class="btn btn-primary">
-            Thêm tòa nhà mới
-        </a>
+<style>
+    .building-page {
+        padding: 24px;
+        background: #f5f7fb;
+        min-height: calc(100vh - 160px);
     }
-</p>
 
-<table class="table table-bordered table-striped">
-    <thead>
-        <tr>
-            <th>Mã tòa nhà</th>
-            <th>Tên tòa nhà</th>
-            <th>Địa chỉ</th>
-            <th>Mô tả</th>
-            <th>Số phòng</th>
-            <th>Chủ nhà</th>
-            <th>Thao tác</th>
-        </tr>
-    </thead>
+    .building-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
 
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.BuildingID</td>
-                <td>@item.BuildingName</td>
-                <td>@item.Address</td>
-                <td>@item.Description</td>
-                <td>@(item.Rooms?.Count ?? 0)</td>
-                <td>@(item.Landlord?.FullName ?? "Chưa xác định")</td>
-                <td>
-                    <a asp-action="Details"
-                       asp-route-id="@item.BuildingID">Chi tiết</a>
-                    |
-                    <a asp-action="Edit"
-                       asp-route-id="@item.BuildingID">Sửa</a>
-                    |
-                    <a asp-action="Delete"
-                       asp-route-id="@item.BuildingID">Xóa</a>
-                </td>
-            </tr>
+    .building-title {
+        font-size: 27px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 5px;
+    }
+
+    .building-subtitle {
+        color: #8492a6;
+        font-size: 14px;
+    }
+
+    .building-create-btn {
+        background: #2563eb;
+        color: white;
+        padding: 11px 19px;
+        border-radius: 9px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+    .building-create-btn:hover {
+        background: #1d4ed8;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .building-stat {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 20px;
+        height: 100%;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .stat-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-label {
+        color: #8492a6;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .stat-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 11px;
+        font-size: 20px;
+    }
+
+    .stat-number {
+        font-size: 26px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-top: 15px;
+    }
+
+    .stat-note {
+        color: #98a2b3;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .building-panel {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 22px;
+        margin-top: 25px;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #172b4d;
+    }
+
+    .building-search {
+        width: 350px;
+        max-width: 100%;
+        padding: 10px 13px;
+        border: 1px solid #dce2ea;
+        border-radius: 8px;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .building-search:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+
+    .building-table {
+        width: 100%;
+        min-width: 950px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .building-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 15px 12px;
+        border-bottom: 1px solid #e8edf3;
+        white-space: nowrap;
+    }
+
+    .building-table tbody td {
+        padding: 16px 12px;
+        border-bottom: 1px solid #edf0f5;
+        font-size: 13px;
+        color: #475569;
+        vertical-align: middle;
+    }
+
+    .building-table tbody tr:hover {
+        background: #f8fbff;
+    }
+
+    .building-id {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .building-name {
+        color: #172b4d;
+        font-weight: 700;
+    }
+
+    .room-count {
+        display: inline-block;
+        background: #eff6ff;
+        color: #2563eb;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 12px;
+    }
+
+    .building-actions {
+        display: flex;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .building-actions .btn {
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .building-empty {
+        text-align: center;
+        padding: 45px 15px !important;
+        color: #94a3b8 !important;
+    }
+
+    @@media(max-width: 768px) {
+        .building-page {
+            padding: 14px;
         }
-    </tbody>
-</table>
+
+        .building-title {
+            font-size: 22px;
+        }
+
+        .building-panel {
+            padding: 14px;
+        }
+
+        .building-search {
+            width: 100%;
+        }
+
+        .building-header {
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<div class="building-page">
+
+    <!-- TIÊU ĐỀ -->
+    <div class="building-header">
+        <div>
+            <h1 class="building-title">Quản lý tòa nhà</h1>
+            <div class="building-subtitle">
+                Quản lý thông tin tòa nhà, địa chỉ và số lượng phòng trọ.
+            </div>
+        </div>
+
+        @if (User.IsInRole("Landlord"))
+        {
+            <a asp-action="Create" class="building-create-btn">
+                + Thêm tòa nhà mới
+            </a>
+        }
+    </div>
+
+    <!-- THÔNG BÁO -->
+    @if (TempData["Success"] is string success)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            ✓ @success
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @error
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- THỐNG KÊ -->
+    <div class="row g-3">
+
+        <div class="col-12 col-md-4">
+            <div class="building-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng số tòa nhà</span>
+                    <span class="stat-icon" style="background:#eff6ff;color:#2563eb;">
+                        🏢
+                    </span>
+                </div>
+                <div class="stat-number">@totalBuildings</div>
+                <div class="stat-note">Số tòa nhà đang được quản lý</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="building-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng số phòng</span>
+                    <span class="stat-icon" style="background:#ecfdf5;color:#059669;">
+                        🏠
+                    </span>
+                </div>
+                <div class="stat-number">@totalRooms</div>
+                <div class="stat-note">Tổng phòng thuộc các tòa nhà</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="building-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Số phòng trung bình</span>
+                    <span class="stat-icon" style="background:#fff7ed;color:#ea580c;">
+                        📊
+                    </span>
+                </div>
+                <div class="stat-number">@averageRooms.ToString("N1")</div>
+                <div class="stat-note">Số phòng trung bình mỗi tòa nhà</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DANH SÁCH TÒA NHÀ -->
+    <div class="building-panel">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+
+            <div class="panel-title">
+                Danh sách tòa nhà
+            </div>
+
+            <input type="text"
+                   id="buildingSearch"
+                   class="building-search"
+                   placeholder="⌕ Tìm tên tòa nhà, địa chỉ, chủ nhà..." />
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="building-table" id="buildingTable">
+
+                <thead>
+                    <tr>
+                        <th>Mã tòa nhà</th>
+                        <th>Tên tòa nhà</th>
+                        <th>Địa chỉ</th>
+                        <th>Mô tả</th>
+                        <th>Số phòng</th>
+                        <th>Chủ nhà</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @if (buildings.Any())
+                    {
+                        @foreach (var item in buildings)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="building-id">
+                                        #@item.BuildingID
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="building-name">
+                                        @item.BuildingName
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @item.Address
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(item.Description)
+                                        ? "—"
+                                        : item.Description)
+                                </td>
+
+                                <td>
+                                    <span class="room-count">
+                                        🏠 @(item.Rooms?.Count ?? 0) phòng
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @(item.Landlord?.FullName ?? "Chưa xác định")
+                                </td>
+
+                                <td>
+                                    <div class="building-actions">
+
+                                        <a asp-action="Details"
+                                           asp-route-id="@item.BuildingID"
+                                           class="btn btn-sm btn-outline-info">
+                                            Chi tiết
+                                        </a>
+
+                                        @if (isManager)
+                                        {
+                                            <a asp-action="Edit"
+                                               asp-route-id="@item.BuildingID"
+                                               class="btn btn-sm btn-outline-primary">
+                                                Sửa
+                                            </a>
+
+                                            <a asp-action="Delete"
+                                               asp-route-id="@item.BuildingID"
+                                               class="btn btn-sm btn-outline-danger">
+                                                Xóa
+                                            </a>
+                                        }
+
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="building-empty">
+                                <div style="font-size:38px;">🏢</div>
+                                <div class="fw-bold mt-2">
+                                    Chưa có tòa nhà nào
+                                </div>
+                                <div class="small mt-1">
+                                    Thông tin tòa nhà sẽ hiển thị tại đây.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+            <span class="small text-muted">
+                Tổng cộng: <strong>@totalBuildings</strong> tòa nhà
+            </span>
+
+            <span class="small text-muted">
+                SmartRental - Quản lý nhà trọ
+            </span>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    document.getElementById("buildingSearch").addEventListener("input", function () {
+        var keyword = this.value.toLowerCase().trim();
+
+        document.querySelectorAll("#buildingTable tbody tr").forEach(function (row) {
+            row.style.display = row.innerText.toLowerCase().includes(keyword)
+                ? ""
+                : "none";
+        });
+    });
+</script>

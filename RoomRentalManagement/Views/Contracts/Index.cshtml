@@ -2,174 +2,588 @@
 @model IEnumerable<RoomRentalManagement.Models.Contract>
 
 @{
-    bool isTenant = User.IsInRole("Tenant");
+    ViewData["Title"] = "Quản lý hợp đồng";
 
-    ViewData["Title"] = isTenant
-        ? "Hợp đồng của tôi"
-        : "Quản lý hợp đồng";
+    var contracts = Model?.ToList() ?? new List<RoomRentalManagement.Models.Contract>();
+
+    bool isTenant = User.IsInRole("Tenant");
+    bool isManager = User.IsInRole("Admin") || User.IsInRole("Landlord");
+
+    var totalContracts = contracts.Count;
+    var activeContracts = contracts.Count(x => x.Status == "Active");
+    var expiredContracts = contracts.Count(x => x.Status == "Expired");
+    var terminatedContracts = contracts.Count(x => x.Status == "Terminated");
 }
 
-<div class="container-fluid py-4">
+<style>
+    .contract-page {
+        padding: 24px;
+        background: #f5f7fb;
+        min-height: calc(100vh - 160px);
+    }
 
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    .contract-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .contract-title {
+        font-size: 27px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 5px;
+    }
+
+    .contract-subtitle {
+        color: #8492a6;
+        font-size: 14px;
+    }
+
+    .contract-create-btn {
+        background: #2563eb;
+        color: white;
+        padding: 11px 19px;
+        border-radius: 9px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+    .contract-create-btn:hover {
+        background: #1d4ed8;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .contract-stat {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 20px;
+        height: 100%;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .stat-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-label {
+        color: #8492a6;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .stat-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 11px;
+        font-size: 20px;
+    }
+
+    .stat-number {
+        font-size: 26px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-top: 15px;
+    }
+
+    .stat-note {
+        color: #98a2b3;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .contract-panel {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 22px;
+        margin-top: 25px;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #172b4d;
+    }
+
+    .contract-search {
+        width: 330px;
+        max-width: 100%;
+        padding: 10px 13px;
+        border: 1px solid #dce2ea;
+        border-radius: 8px;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .contract-filter {
+        padding: 10px 12px;
+        border: 1px solid #dce2ea;
+        border-radius: 8px;
+        background: white;
+        color: #475569;
+        font-size: 13px;
+    }
+
+    .contract-search:focus,
+    .contract-filter:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+
+    .contract-table {
+        width: 100%;
+        min-width: 1050px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .contract-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 15px 12px;
+        border-bottom: 1px solid #e8edf3;
+        white-space: nowrap;
+    }
+
+    .contract-table tbody td {
+        padding: 16px 12px;
+        border-bottom: 1px solid #edf0f5;
+        font-size: 13px;
+        color: #475569;
+        vertical-align: middle;
+    }
+
+    .contract-table tbody tr:hover {
+        background: #f8fbff;
+    }
+
+    .contract-id {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .contract-room {
+        color: #172b4d;
+        font-weight: 700;
+    }
+
+    .contract-price {
+        color: #059669 !important;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .contract-deposit {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .contract-status {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .status-active {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-expired {
+        background: #e2e8f0;
+        color: #475569;
+    }
+
+    .status-terminated {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .status-other {
+        background: #eff6ff;
+        color: #2563eb;
+    }
+
+    .contract-actions {
+        display: flex;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .contract-actions .btn {
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .contract-empty {
+        text-align: center;
+        padding: 45px 15px !important;
+        color: #94a3b8 !important;
+    }
+
+    @@media(max-width: 768px) {
+        .contract-page {
+            padding: 14px;
+        }
+
+        .contract-title {
+            font-size: 22px;
+        }
+
+        .contract-panel {
+            padding: 14px;
+        }
+
+        .contract-search {
+            width: 100%;
+        }
+
+        .contract-header {
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<div class="contract-page">
+
+    <!-- TIÊU ĐỀ -->
+    <div class="contract-header">
         <div>
-            <h2 class="fw-bold mb-1">
-                @(isTenant ? "Hợp đồng của tôi" : "Danh sách hợp đồng")
-            </h2>
-            <p class="text-muted mb-0">
+            <h1 class="contract-title">
+                @(isTenant ? "Hợp đồng của tôi" : "Quản lý hợp đồng")
+            </h1>
+
+            <div class="contract-subtitle">
                 @(isTenant
-                    ? "Thông tin hợp đồng thuê phòng của bạn"
-                    : "Quản lý thông tin các hợp đồng thuê phòng")
-            </p>
+                    ? "Theo dõi thông tin và thời hạn hợp đồng thuê phòng của bạn."
+                    : "Quản lý thông tin, thời hạn và trạng thái hợp đồng thuê phòng.")
+            </div>
         </div>
 
-        @if (User.IsInRole("Admin") || User.IsInRole("Landlord"))
+        @if (isManager)
         {
-            <a asp-action="Create" class="btn btn-primary px-4">
-                <i class="bi bi-plus-circle"></i>
-                Tạo hợp đồng mới
+            <a asp-action="Create" class="contract-create-btn">
+                + Tạo hợp đồng mới
             </a>
         }
     </div>
 
+    <!-- THÔNG BÁO -->
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success">
-            @TempData["Success"]
+        <div class="alert alert-success alert-dismissible fade show">
+            ✓ @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
 
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger">
+        <div class="alert alert-danger alert-dismissible fade show">
             @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
 
-    @if (!Model.Any())
-    {
-        <div class="alert alert-info">
-            @(isTenant
-                ? "Bạn hiện chưa có hợp đồng thuê phòng nào."
-                : "Hiện chưa có hợp đồng nào trong hệ thống.")
+    <!-- THỐNG KÊ -->
+    <div class="row g-3">
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="contract-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng hợp đồng</span>
+                    <span class="stat-icon" style="background:#eff6ff;color:#2563eb;">
+                        📋
+                    </span>
+                </div>
+                <div class="stat-number">@totalContracts</div>
+                <div class="stat-note">Tổng số hợp đồng hiện có</div>
+            </div>
         </div>
-    }
-    else
-    {
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-body p-3">
 
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered align-middle mb-0">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="contract-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Đang hiệu lực</span>
+                    <span class="stat-icon" style="background:#ecfdf5;color:#059669;">
+                        ✓
+                    </span>
+                </div>
+                <div class="stat-number" style="color:#059669;">
+                    @activeContracts
+                </div>
+                <div class="stat-note">Hợp đồng đang có hiệu lực</div>
+            </div>
+        </div>
 
-                        <thead class="table-light">
-                            <tr>
-                                <th>Mã HĐ</th>
-                                <th>Phòng</th>
-                                <th>Người thuê</th>
-                                <th>Ngày bắt đầu</th>
-                                <th>Ngày kết thúc</th>
-                                <th>Tiền cọc</th>
-                                <th>Giá thuê</th>
-                                <th>Trạng thái</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="contract-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Đã hết hạn</span>
+                    <span class="stat-icon" style="background:#f1f5f9;color:#64748b;">
+                        ◷
+                    </span>
+                </div>
+                <div class="stat-number">
+                    @expiredContracts
+                </div>
+                <div class="stat-note">Hợp đồng đã hết thời hạn</div>
+            </div>
+        </div>
 
-                        <tbody>
-                            @foreach (var item in Model)
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="contract-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Đã chấm dứt</span>
+                    <span class="stat-icon" style="background:#fff7ed;color:#ea580c;">
+                        !
+                    </span>
+                </div>
+                <div class="stat-number" style="color:#ea580c;">
+                    @terminatedContracts
+                </div>
+                <div class="stat-note">Hợp đồng đã chấm dứt</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DANH SÁCH HỢP ĐỒNG -->
+    <div class="contract-panel">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+
+            <div class="panel-title">
+                Danh sách hợp đồng
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+
+                <input type="text"
+                       id="contractSearch"
+                       class="contract-search"
+                       placeholder="⌕ Tìm mã HĐ, phòng, người thuê..." />
+
+                <select id="contractStatusFilter" class="contract-filter">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="active">Đang hiệu lực</option>
+                    <option value="expired">Đã hết hạn</option>
+                    <option value="terminated">Đã chấm dứt</option>
+                    <option value="other">Khác</option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="contract-table" id="contractTable">
+
+                <thead>
+                    <tr>
+                        <th>Mã hợp đồng</th>
+                        <th>Phòng</th>
+
+                        @if (!isTenant)
+                        {
+                            <th>Người thuê</th>
+                        }
+
+                        <th>Ngày bắt đầu</th>
+                        <th>Ngày kết thúc</th>
+                        <th>Tiền cọc</th>
+                        <th>Giá thuê/tháng</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @if (contracts.Any())
+                    {
+                        @foreach (var item in contracts)
+                        {
+                            var statusLabel = item.Status switch
                             {
-                                <tr>
-                                    <td class="fw-semibold">
+                                "Active" => "Đang hiệu lực",
+                                "Expired" => "Đã hết hạn",
+                                "Terminated" => "Đã chấm dứt",
+                                _ => item.Status ?? "Chưa xác định"
+                            };
+
+                            var statusClass = item.Status switch
+                            {
+                                "Active" => "status-active",
+                                "Expired" => "status-expired",
+                                "Terminated" => "status-terminated",
+                                _ => "status-other"
+                            };
+
+                            var filterStatus = item.Status switch
+                            {
+                                "Active" => "active",
+                                "Expired" => "expired",
+                                "Terminated" => "terminated",
+                                _ => "other"
+                            };
+
+                            <tr data-status="@filterStatus">
+
+                                <td>
+                                    <span class="contract-id">
                                         #@item.ContractID
-                                    </td>
+                                    </span>
+                                </td>
 
-                                    <td>
+                                <td>
+                                    <span class="contract-room">
                                         @(item.Room?.RoomName ?? $"Phòng #{item.RoomID}")
-                                    </td>
+                                    </span>
+                                </td>
 
+                                @if (!isTenant)
+                                {
                                     <td>
                                         @(item.Tenant?.FullName ?? $"Người thuê #{item.TenantID}")
                                     </td>
+                                }
 
-                                    <td class="text-nowrap">
-                                        @item.StartDate.ToString("dd/MM/yyyy")
-                                    </td>
+                                <td class="text-nowrap">
+                                    @item.StartDate.ToString("dd/MM/yyyy")
+                                </td>
 
-                                    <td class="text-nowrap">
-                                        @(item.EndDate.HasValue
-                                            ? item.EndDate.Value.ToString("dd/MM/yyyy")
-                                            : "Không xác định")
-                                    </td>
+                                <td class="text-nowrap">
+                                    @(item.EndDate.HasValue
+                                        ? item.EndDate.Value.ToString("dd/MM/yyyy")
+                                        : "Không xác định")
+                                </td>
 
-                                    <td class="text-nowrap">
-                                        @item.Deposit.ToString("N0") VNĐ
-                                    </td>
+                                <td class="contract-deposit">
+                                    @item.Deposit.ToString("N0") đ
+                                </td>
 
-                                    <td class="text-nowrap">
-                                        @item.RentPrice.ToString("N0") VNĐ/tháng
-                                    </td>
+                                <td class="contract-price">
+                                    @item.RentPrice.ToString("N0") đ
+                                </td>
 
-                                    <td>
-                                        @if (item.Status == "Active")
-                                        {
-                                            <span class="badge bg-success px-3 py-2">
-                                                Đang hiệu lực
-                                            </span>
-                                        }
-                                        else if (item.Status == "Expired")
-                                        {
-                                            <span class="badge bg-secondary px-3 py-2">
-                                                Đã hết hạn
-                                            </span>
-                                        }
-                                        else if (item.Status == "Terminated")
-                                        {
-                                            <span class="badge bg-warning text-dark px-3 py-2">
-                                                Đã chấm dứt
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">
-                                                @item.Status
-                                            </span>
-                                        }
-                                    </td>
+                                <td>
+                                    <span class="contract-status @statusClass">
+                                        @statusLabel
+                                    </span>
+                                </td>
 
-                                    <td class="text-nowrap">
-                                        @if (!isTenant)
+                                <td>
+                                    <div class="contract-actions">
+
+                                        @if (isManager)
                                         {
                                             <a asp-action="Edit"
                                                asp-route-id="@item.ContractID"
-                                               class="btn btn-sm btn-warning">
+                                               class="btn btn-sm btn-outline-primary">
                                                 Sửa
                                             </a>
                                         }
 
                                         <a asp-action="Details"
                                            asp-route-id="@item.ContractID"
-                                           class="btn btn-sm btn-info">
+                                           class="btn btn-sm btn-outline-info">
                                             Chi tiết
                                         </a>
 
-                                        @if (!isTenant)
+                                        @if (isManager)
                                         {
                                             <a asp-action="Delete"
                                                asp-route-id="@item.ContractID"
-                                               class="btn btn-sm btn-danger">
+                                               class="btn btn-sm btn-outline-danger">
                                                 Xóa
                                             </a>
                                         }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
 
-                    </table>
-                </div>
-            </div>
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="contract-empty">
+                                <div style="font-size:38px;">📋</div>
+
+                                <div class="fw-bold mt-2">
+                                    @(isTenant
+                                        ? "Bạn chưa có hợp đồng thuê phòng"
+                                        : "Chưa có hợp đồng nào")
+                                </div>
+
+                                <div class="small mt-1">
+                                    Thông tin hợp đồng sẽ hiển thị tại đây.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
         </div>
-    }
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+
+            <span class="small text-muted">
+                Tổng cộng: <strong>@totalContracts</strong> hợp đồng
+            </span>
+
+            <span class="small text-muted">
+                SmartRental - Quản lý nhà trọ
+            </span>
+
+        </div>
+
+    </div>
 
 </div>
+
+<script>
+    const contractSearch = document.getElementById("contractSearch");
+    const contractStatusFilter = document.getElementById("contractStatusFilter");
+
+    function filterContracts() {
+        const keyword = contractSearch.value.toLowerCase().trim();
+        const status = contractStatusFilter.value;
+
+        document.querySelectorAll("#contractTable tbody tr[data-status]")
+            .forEach(row => {
+                const matchesKeyword = row.innerText.toLowerCase().includes(keyword);
+                const matchesStatus = !status || row.dataset.status === status;
+
+                row.style.display = matchesKeyword && matchesStatus ? "" : "none";
+            });
+    }
+
+    contractSearch.addEventListener("input", filterContracts);
+    contractStatusFilter.addEventListener("change", filterContracts);
+</script>
