@@ -1,57 +1,456 @@
 
 @{
-    ViewData["Title"] = "Thống kê";
+    ViewData["Title"] = "Thống kê hệ thống";
+
+    var totalRooms = Convert.ToInt32(ViewBag.TotalRooms ?? 0);
+    var totalTenants = Convert.ToInt32(ViewBag.TotalTenants ?? 0);
+    var totalContracts = Convert.ToInt32(ViewBag.TotalContracts ?? 0);
+    var totalInvoices = Convert.ToInt32(ViewBag.TotalInvoices ?? 0);
+    var totalPayments = Convert.ToInt32(ViewBag.TotalPayments ?? 0);
+    var totalRequests = Convert.ToInt32(ViewBag.TotalRequests ?? 0);
+    var totalRevenue = Convert.ToDecimal(ViewBag.TotalRevenue ?? 0);
+
+    var maxValue = Math.Max(1, new[] {
+        totalRooms,
+        totalTenants,
+        totalContracts,
+        totalInvoices,
+        totalPayments,
+        totalRequests
+    }.Max());
+
+    var roomPercent = totalRooms * 100.0 / maxValue;
+    var tenantPercent = totalTenants * 100.0 / maxValue;
+    var contractPercent = totalContracts * 100.0 / maxValue;
+    var invoicePercent = totalInvoices * 100.0 / maxValue;
+    var paymentPercent = totalPayments * 100.0 / maxValue;
+    var requestPercent = totalRequests * 100.0 / maxValue;
 }
 
-<h2 class="mb-4">Thống kê hệ thống</h2>
+<style>
+    .statistics-page {
+        padding: 24px;
+        background: #f5f7fb;
+        min-height: calc(100vh - 160px);
+    }
 
-<div class="row g-3">
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <h5>Tổng số phòng</h5>
-            <h2>@ViewBag.TotalRooms</h2>
+    .statistics-header {
+        margin-bottom: 25px;
+    }
+
+    .statistics-title {
+        font-size: 27px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 5px;
+    }
+
+    .statistics-subtitle {
+        color: #8492a6;
+        font-size: 14px;
+    }
+
+    .stat-card {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 21px;
+        height: 100%;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+        transition: .2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 7px 20px rgba(0,0,0,.07);
+    }
+
+    .stat-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-label {
+        color: #8492a6;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .stat-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 22px;
+    }
+
+    .stat-value {
+        font-size: 30px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-top: 17px;
+    }
+
+    .stat-description {
+        color: #98a2b3;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .revenue-card {
+        background: linear-gradient(120deg, #1d4ed8, #2563eb);
+        color: white;
+        border-radius: 14px;
+        padding: 27px;
+        height: 100%;
+        box-shadow: 0 5px 18px rgba(37,99,235,.15);
+    }
+
+    .revenue-label {
+        color: rgba(255,255,255,.8);
+        font-size: 14px;
+    }
+
+    .revenue-value {
+        font-size: clamp(25px, 3vw, 36px);
+        font-weight: 700;
+        margin-top: 17px;
+        overflow-wrap: anywhere;
+    }
+
+    .revenue-description {
+        color: rgba(255,255,255,.75);
+        font-size: 13px;
+        margin-top: 10px;
+    }
+
+    .revenue-icon {
+        font-size: 35px;
+    }
+
+    .statistics-panel {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 23px;
+        margin-top: 25px;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 6px;
+    }
+
+    .panel-subtitle {
+        color: #98a2b3;
+        font-size: 13px;
+        margin-bottom: 23px;
+    }
+
+    .metric-item {
+        margin-bottom: 22px;
+    }
+
+    .metric-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 9px;
+        font-size: 13px;
+    }
+
+    .metric-name {
+        color: #475569;
+        font-weight: 600;
+    }
+
+    .metric-number {
+        color: #172b4d;
+        font-weight: 700;
+    }
+
+    .metric-track {
+        width: 100%;
+        height: 9px;
+        background: #edf1f7;
+        border-radius: 20px;
+        overflow: hidden;
+    }
+
+    .metric-bar {
+        height: 100%;
+        border-radius: 20px;
+        transition: width .4s;
+    }
+
+    .statistics-footer {
+        color: #98a2b3;
+        font-size: 12px;
+        text-align: right;
+        margin-top: 22px;
+    }
+
+    @@media(max-width: 768px) {
+        .statistics-page {
+            padding: 14px;
+        }
+
+        .statistics-title {
+            font-size: 22px;
+        }
+
+        .statistics-panel {
+            padding: 17px;
+        }
+    }
+</style>
+
+<div class="statistics-page">
+
+    <!-- TIÊU ĐỀ -->
+    <div class="statistics-header">
+        <h1 class="statistics-title">Thống kê hệ thống</h1>
+        <p class="statistics-subtitle">
+            Tổng quan tình hình hoạt động và quản lý nhà trọ SmartRental.
+        </p>
+    </div>
+
+    <!-- CÁC THẺ THỐNG KÊ -->
+    <div class="row g-3">
+
+        <!-- TỔNG PHÒNG -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <span class="stat-label">Tổng số phòng</span>
+                    <span class="stat-icon"
+                          style="background:#eff6ff;color:#2563eb;">
+                        🏠
+                    </span>
+                </div>
+                <div class="stat-value">@totalRooms</div>
+                <div class="stat-description">
+                    Tổng số phòng trong hệ thống
+                </div>
+            </div>
+        </div>
+
+        <!-- NGƯỜI THUÊ -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <span class="stat-label">Người thuê</span>
+                    <span class="stat-icon"
+                          style="background:#f0fdf4;color:#16a34a;">
+                        👥
+                    </span>
+                </div>
+                <div class="stat-value">@totalTenants</div>
+                <div class="stat-description">
+                    Tổng số người thuê được quản lý
+                </div>
+            </div>
+        </div>
+
+        <!-- HỢP ĐỒNG -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <span class="stat-label">Hợp đồng</span>
+                    <span class="stat-icon"
+                          style="background:#fff7ed;color:#ea580c;">
+                        📋
+                    </span>
+                </div>
+                <div class="stat-value">@totalContracts</div>
+                <div class="stat-description">
+                    Tổng số hợp đồng thuê phòng
+                </div>
+            </div>
+        </div>
+
+        <!-- HÓA ĐƠN -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <span class="stat-label">Hóa đơn</span>
+                    <span class="stat-icon"
+                          style="background:#f5f3ff;color:#7c3aed;">
+                        📄
+                    </span>
+                </div>
+                <div class="stat-value">@totalInvoices</div>
+                <div class="stat-description">
+                    Tổng số hóa đơn đã tạo
+                </div>
+            </div>
+        </div>
+
+        <!-- THANH TOÁN -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <span class="stat-label">Lượt thanh toán</span>
+                    <span class="stat-icon"
+                          style="background:#ecfdf5;color:#059669;">
+                        💳
+                    </span>
+                </div>
+                <div class="stat-value">@totalPayments</div>
+                <div class="stat-description">
+                    Tổng giao dịch thanh toán
+                </div>
+            </div>
+        </div>
+
+        <!-- YÊU CẦU -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <span class="stat-label">Yêu cầu / Sự cố</span>
+                    <span class="stat-icon"
+                          style="background:#fff1f2;color:#e11d48;">
+                        🔔
+                    </span>
+                </div>
+                <div class="stat-value">@totalRequests</div>
+                <div class="stat-description">
+                    Tổng yêu cầu từ người thuê
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DOANH THU -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="revenue-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="revenue-label">
+                            Tổng tiền thanh toán
+                        </div>
+
+                        <div class="revenue-value">
+                            @totalRevenue.ToString("N0") VNĐ
+                        </div>
+
+                        <div class="revenue-description">
+                            Tổng giá trị các giao dịch thanh toán được thống kê.
+                        </div>
+                    </div>
+
+                    <div class="revenue-icon">💰</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <h5>Người thuê</h5>
-            <h2>@ViewBag.TotalTenants</h2>
+    <!-- TỔNG QUAN DỮ LIỆU -->
+    <div class="statistics-panel">
+
+        <div class="panel-title">
+            Tổng quan dữ liệu hệ thống
         </div>
+
+        <div class="panel-subtitle">
+            So sánh số lượng các nhóm dữ liệu hiện có.
+            Thanh dài nhất tương ứng với nhóm có số lượng lớn nhất.
+        </div>
+
+        <!-- PHÒNG -->
+        <div class="metric-item">
+            <div class="metric-header">
+                <span class="metric-name">🏠 Phòng trọ</span>
+                <span class="metric-number">@totalRooms</span>
+            </div>
+            <div class="metric-track">
+                <div class="metric-bar"
+                     style="width:@roomPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;background:#3b82f6;">
+                </div>
+            </div>
+        </div>
+
+        <!-- NGƯỜI THUÊ -->
+        <div class="metric-item">
+            <div class="metric-header">
+                <span class="metric-name">👥 Người thuê</span>
+                <span class="metric-number">@totalTenants</span>
+            </div>
+            <div class="metric-track">
+                <div class="metric-bar"
+                     style="width:@tenantPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;background:#16a34a;">
+                </div>
+            </div>
+        </div>
+
+        <!-- HỢP ĐỒNG -->
+        <div class="metric-item">
+            <div class="metric-header">
+                <span class="metric-name">📋 Hợp đồng</span>
+                <span class="metric-number">@totalContracts</span>
+            </div>
+            <div class="metric-track">
+                <div class="metric-bar"
+                     style="width:@contractPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;background:#f59e0b;">
+                </div>
+            </div>
+        </div>
+
+        <!-- HÓA ĐƠN -->
+        <div class="metric-item">
+            <div class="metric-header">
+                <span class="metric-name">📄 Hóa đơn</span>
+                <span class="metric-number">@totalInvoices</span>
+            </div>
+            <div class="metric-track">
+                <div class="metric-bar"
+                     style="width:@invoicePercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;background:#8b5cf6;">
+                </div>
+            </div>
+        </div>
+
+        <!-- THANH TOÁN -->
+        <div class="metric-item">
+            <div class="metric-header">
+                <span class="metric-name">💳 Thanh toán</span>
+                <span class="metric-number">@totalPayments</span>
+            </div>
+            <div class="metric-track">
+                <div class="metric-bar"
+                     style="width:@paymentPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;background:#06b6d4;">
+                </div>
+            </div>
+        </div>
+
+        <!-- YÊU CẦU -->
+        <div class="metric-item">
+            <div class="metric-header">
+                <span class="metric-name">🔔 Yêu cầu / Sự cố</span>
+                <span class="metric-number">@totalRequests</span>
+            </div>
+            <div class="metric-track">
+                <div class="metric-bar"
+                     style="width:@requestPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;background:#e11d48;">
+                </div>
+            </div>
+        </div>
+
+        <div class="statistics-footer">
+            SmartRental - Hệ thống quản lý nhà trọ
+        </div>
+
     </div>
 
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <h5>Hợp đồng</h5>
-            <h2>@ViewBag.TotalContracts</h2>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <h5>Hóa đơn</h5>
-            <h2>@ViewBag.TotalInvoices</h2>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <h5>Lượt thanh toán</h5>
-            <h2>@ViewBag.TotalPayments</h2>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <h5>Yêu cầu / Sự cố</h5>
-            <h2>@ViewBag.TotalRequests</h2>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="card shadow-sm p-3">
-            <h5>Tổng tiền thanh toán</h5>
-            <h2>@(((decimal)ViewBag.TotalRevenue).ToString("N0")) VNĐ</h2>
-        </div>
-    </div>
 </div>

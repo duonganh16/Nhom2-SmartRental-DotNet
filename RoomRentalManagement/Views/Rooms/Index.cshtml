@@ -4,87 +4,565 @@
 @{
     ViewData["Title"] = User.IsInRole("Tenant")
         ? "Phòng đang thuê"
-        : "Danh sách phòng";
+        : "Quản lý phòng trọ";
+
+    var rooms = Model?.ToList() ?? new List<RoomRentalManagement.Models.Room>();
+
     bool isTenant = User.IsInRole("Tenant");
+    bool isManager = User.IsInRole("Admin") || User.IsInRole("Landlord");
+
+    var totalRooms = rooms.Count;
+    var rentedRooms = rooms.Count(x =>
+        x.Status != null &&
+        x.Status.Trim().Equals("Occupied", StringComparison.OrdinalIgnoreCase));
+
+    var vacantRooms = rooms.Count(x =>
+        x.Status != null &&
+        x.Status.Trim().Equals("Available", StringComparison.OrdinalIgnoreCase));
+
+    var totalArea = rooms.Sum(x => x.Area);
 }
 
-<h1>@ViewData["Title"]</h1>
+<style>
+    .room-page {
+        padding: 24px;
+        background: #f5f7fb;
+        min-height: calc(100vh - 160px);
+    }
 
-@if (!isTenant)
-{
-    <p>
-        <a asp-action="Create" class="btn btn-primary">
-            Thêm phòng mới
-        </a>
-    </p>
-}
+    .room-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
 
-@if (Model == null || !Model.Any())
-{
-    <div class="alert alert-info">
-        Bạn hiện chưa có phòng nào đang thuê.
-        Vui lòng liên hệ chủ trọ nếu thông tin này chưa chính xác.
+    .room-title {
+        font-size: 27px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 5px;
+    }
+
+    .room-subtitle {
+        color: #8492a6;
+        font-size: 14px;
+    }
+
+    .room-create-btn {
+        background: #2563eb;
+        color: white;
+        padding: 11px 19px;
+        border-radius: 9px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+    .room-create-btn:hover {
+        background: #1d4ed8;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .room-stat {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 20px;
+        height: 100%;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .stat-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-label {
+        color: #8492a6;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .stat-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 11px;
+        font-size: 20px;
+    }
+
+    .stat-number {
+        font-size: 26px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-top: 15px;
+    }
+
+    .stat-note {
+        color: #98a2b3;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .room-panel {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 22px;
+        margin-top: 25px;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #172b4d;
+    }
+
+    .room-search {
+        width: 330px;
+        max-width: 100%;
+        padding: 10px 13px;
+        border: 1px solid #dce2ea;
+        border-radius: 8px;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .room-filter {
+        padding: 10px 12px;
+        border: 1px solid #dce2ea;
+        border-radius: 8px;
+        background: white;
+        color: #475569;
+        font-size: 13px;
+    }
+
+    .room-search:focus,
+    .room-filter:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+
+    .room-table {
+        width: 100%;
+        min-width: 1050px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .room-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 15px 12px;
+        border-bottom: 1px solid #e8edf3;
+        white-space: nowrap;
+    }
+
+    .room-table tbody td {
+        padding: 16px 12px;
+        border-bottom: 1px solid #edf0f5;
+        font-size: 13px;
+        color: #475569;
+        vertical-align: middle;
+    }
+
+    .room-table tbody tr:hover {
+        background: #f8fbff;
+    }
+
+    .room-id {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .room-name {
+        color: #172b4d;
+        font-weight: 700;
+    }
+
+    .room-price {
+        color: #059669 !important;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .room-status {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .status-occupied {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-available {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-other {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .room-actions {
+        display: flex;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .room-actions .btn {
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .room-empty {
+        text-align: center;
+        padding: 45px 15px !important;
+        color: #94a3b8 !important;
+    }
+
+    @@media(max-width: 768px) {
+        .room-page {
+            padding: 14px;
+        }
+
+        .room-title {
+            font-size: 22px;
+        }
+
+        .room-panel {
+            padding: 14px;
+        }
+
+        .room-search {
+            width: 100%;
+        }
+
+        .room-header {
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<div class="room-page">
+
+    <!-- TIÊU ĐỀ -->
+    <div class="room-header">
+        <div>
+            <h1 class="room-title">
+                @(isTenant ? "Phòng đang thuê" : "Quản lý phòng trọ")
+            </h1>
+
+            <div class="room-subtitle">
+                @(isTenant
+                    ? "Thông tin chi tiết về phòng trọ bạn đang thuê."
+                    : "Quản lý thông tin phòng, giá thuê và tình trạng sử dụng.")
+            </div>
+        </div>
+
+        @if (isManager)
+        {
+            <a asp-action="Create" class="room-create-btn">
+                + Thêm phòng mới
+            </a>
+        }
     </div>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>Mã phòng</th>
-                    <th>Tên phòng</th>
-                    <th>Tòa nhà</th>
-                    <th>Giá thuê</th>
-                    <th>Diện tích</th>
-                    <th>Trạng thái</th>
-                    <th>Mô tả</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
 
-            <tbody>
-                @foreach (var item in Model)
-                {
+    <!-- THÔNG BÁO -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            ✓ @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- THỐNG KÊ -->
+    <div class="row g-3">
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="room-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng số phòng</span>
+                    <span class="stat-icon" style="background:#eff6ff;color:#2563eb;">
+                        🏠
+                    </span>
+                </div>
+                <div class="stat-number">@totalRooms</div>
+                <div class="stat-note">Tổng phòng trong danh sách</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="room-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Đang cho thuê</span>
+                    <span class="stat-icon" style="background:#ecfdf5;color:#059669;">
+                        ✓
+                    </span>
+                </div>
+                <div class="stat-number" style="color:#059669;">
+                    @rentedRooms
+                </div>
+                <div class="stat-note">Phòng đang có người thuê</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="room-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Phòng trống</span>
+                    <span class="stat-icon" style="background:#eff6ff;color:#2563eb;">
+                        🔑
+                    </span>
+                </div>
+                <div class="stat-number" style="color:#2563eb;">
+                    @vacantRooms
+                </div>
+                <div class="stat-note">Phòng sẵn sàng cho thuê</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="room-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng diện tích</span>
+                    <span class="stat-icon" style="background:#fff7ed;color:#ea580c;">
+                        📐
+                    </span>
+                </div>
+                <div class="stat-number">
+                    @totalArea.ToString("N1") m²
+                </div>
+                <div class="stat-note">Tổng diện tích các phòng</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DANH SÁCH PHÒNG -->
+    <div class="room-panel">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+
+            <div class="panel-title">
+                Danh sách phòng
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+
+                <input type="text"
+                       id="roomSearch"
+                       class="room-search"
+                       placeholder="⌕ Tìm tên phòng, tòa nhà..." />
+
+                <select id="roomStatusFilter" class="room-filter">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="occupied">Đang cho thuê</option>
+                    <option value="available">Phòng trống</option>
+                    <option value="other">Khác</option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="room-table" id="roomTable">
+
+                <thead>
                     <tr>
-                        <td>@item.RoomID</td>
-                        <td>@item.RoomName</td>
-                        <td>
-                            @(item.Building?.BuildingName ?? "Chưa có tòa nhà")
-                        </td>
-                        <td>@item.Price.ToString("N0") VNĐ</td>
-                        <td>@item.Area m²</td>
-                        <td>
-                            <span class="badge bg-success">
-                                @item.Status
-                            </span>
-                        </td>
-                        <td>@item.Description</td>
-                        <td>
-                            <a asp-action="Details"
-                               asp-route-id="@item.RoomID"
-                               class="btn btn-sm btn-info">
-                                Chi tiết
-                            </a>
-
-                            @if (!isTenant)
-                            {
-                                <a asp-action="Edit"
-                                   asp-route-id="@item.RoomID"
-                                   class="btn btn-sm btn-warning">
-                                    Sửa
-                                </a>
-
-                                <a asp-action="Delete"
-                                   asp-route-id="@item.RoomID"
-                                   class="btn btn-sm btn-danger">
-                                    Xóa
-                                </a>
-                            }
-                        </td>
+                        <th>Mã phòng</th>
+                        <th>Tên phòng</th>
+                        <th>Tòa nhà</th>
+                        <th>Giá thuê</th>
+                        <th>Diện tích</th>
+                        <th>Trạng thái</th>
+                        <th>Mô tả</th>
+                        <th>Thao tác</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+
+                <tbody>
+
+                    @if (rooms.Any())
+                    {
+                        @foreach (var item in rooms)
+                        {
+                            var normalizedStatus = (item.Status ?? "").Trim();
+
+                            var statusLabel = normalizedStatus.Equals(
+                                "Occupied", StringComparison.OrdinalIgnoreCase)
+                                ? "Đang cho thuê"
+                                : normalizedStatus.Equals(
+                                    "Available", StringComparison.OrdinalIgnoreCase)
+                                    ? "Phòng trống"
+                                    : normalizedStatus;
+
+                            var statusClass = normalizedStatus.Equals(
+                                "Occupied", StringComparison.OrdinalIgnoreCase)
+                                ? "status-occupied"
+                                : normalizedStatus.Equals(
+                                    "Available", StringComparison.OrdinalIgnoreCase)
+                                    ? "status-available"
+                                    : "status-other";
+
+                            var filterStatus = normalizedStatus.Equals(
+                                "Occupied", StringComparison.OrdinalIgnoreCase)
+                                ? "occupied"
+                                : normalizedStatus.Equals(
+                                    "Available", StringComparison.OrdinalIgnoreCase)
+                                    ? "available"
+                                    : "other";
+
+                            <tr data-status="@filterStatus">
+
+                                <td>
+                                    <span class="room-id">#@item.RoomID</span>
+                                </td>
+
+                                <td>
+                                    <span class="room-name">@item.RoomName</span>
+                                </td>
+
+                                <td>
+                                    @(item.Building?.BuildingName ?? "Chưa có tòa nhà")
+                                </td>
+
+                                <td class="room-price">
+                                    @item.Price.ToString("N0") đ/tháng
+                                </td>
+
+                                <td class="text-nowrap">
+                                    @item.Area m²
+                                </td>
+
+                                <td>
+                                    <span class="room-status @statusClass">
+                                        @statusLabel
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(item.Description)
+                                        ? "—"
+                                        : item.Description)
+                                </td>
+
+                                <td>
+                                    <div class="room-actions">
+
+                                        <a asp-action="Details"
+                                           asp-route-id="@item.RoomID"
+                                           class="btn btn-sm btn-outline-info">
+                                            Chi tiết
+                                        </a>
+
+                                        @if (isManager)
+                                        {
+                                            <a asp-action="Edit"
+                                               asp-route-id="@item.RoomID"
+                                               class="btn btn-sm btn-outline-primary">
+                                                Sửa
+                                            </a>
+
+                                            <a asp-action="Delete"
+                                               asp-route-id="@item.RoomID"
+                                               class="btn btn-sm btn-outline-danger">
+                                                Xóa
+                                            </a>
+                                        }
+
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="room-empty">
+                                <div style="font-size:38px;">🏠</div>
+
+                                <div class="fw-bold mt-2">
+                                    @(isTenant
+                                        ? "Bạn hiện chưa có phòng đang thuê"
+                                        : "Chưa có phòng nào trong hệ thống")
+                                </div>
+
+                                <div class="small mt-1">
+                                    Thông tin phòng sẽ được hiển thị tại đây.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+
+            <span class="small text-muted">
+                Tổng cộng: <strong>@totalRooms</strong> phòng
+            </span>
+
+            <span class="small text-muted">
+                SmartRental - Quản lý nhà trọ
+            </span>
+
+        </div>
+
     </div>
-}
+
+</div>
+
+<script>
+    const roomSearch = document.getElementById("roomSearch");
+    const roomStatusFilter = document.getElementById("roomStatusFilter");
+
+    function filterRooms() {
+        const keyword = roomSearch.value.toLowerCase().trim();
+        const status = roomStatusFilter.value;
+
+        document.querySelectorAll("#roomTable tbody tr[data-status]")
+            .forEach(row => {
+                const matchesKeyword = row.innerText.toLowerCase().includes(keyword);
+                const matchesStatus = !status || row.dataset.status === status;
+
+                row.style.display = matchesKeyword && matchesStatus ? "" : "none";
+            });
+    }
+
+    roomSearch.addEventListener("input", filterRooms);
+    roomStatusFilter.addEventListener("change", filterRooms);
+</script>

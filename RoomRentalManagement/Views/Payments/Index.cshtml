@@ -1,102 +1,494 @@
+
 @model IEnumerable<RoomRentalManagement.Models.Payment>
 
 @{
     ViewData["Title"] = "Quản lý thanh toán";
+
+    var payments = Model?.ToList() ?? new List<RoomRentalManagement.Models.Payment>();
+
+    bool isManager = User.IsInRole("Admin") || User.IsInRole("Landlord");
+    bool isTenant = User.IsInRole("Tenant");
+
+    var totalAmount = payments.Sum(p => p.Amount);
+    var totalPayments = payments.Count;
+    var averageAmount = totalPayments > 0 ? totalAmount / totalPayments : 0;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>
-    @(User.IsInRole("Tenant")
-        ? "Lịch sử thanh toán"
-        : "Quản lý thanh toán")
-</h1>
-    @if (User.IsInRole("Admin") || User.IsInRole("Landlord"))
-{
-    <a asp-action="Create" class="btn btn-primary">
-        + Ghi nhận thanh toán
-    </a>
-}
-
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success">@TempData["Success"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
-
-<div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Mã thanh toán</th>
-                <th>Hóa đơn</th>
-                <th>Phòng</th>
-                <th>Người thuê</th>
-                <th>Ngày thanh toán</th>
-                <th>Số tiền</th>
-                <th>Phương thức</th>
-                <th>Ghi chú</th>
-                @if (User.IsInRole("Admin") || User.IsInRole("Landlord"))
-{
-    <th style="min-width: 190px;">Thao tác</th>
-}
-else
-{
-    <th>Chi tiết</th>
-}
-            </tr>
-        </thead>
-        <tbody>
-        @if (!Model.Any())
-        {
-            <tr><td colspan="9" class="text-center text-muted py-4">Chưa có giao dịch thanh toán nào.</td></tr>
-        }
-        else
-        {
-            @foreach (var payment in Model)
-            {
-                <tr>
-                    <td>@payment.PaymentID</td>
-                    <td>
-                        @if (payment.Invoice != null)
-                        {
-                            <a asp-controller="Invoices" asp-action="Details" asp-route-id="@payment.InvoiceID">#@payment.InvoiceID</a>
-                            <div class="small text-muted">@payment.Invoice.BillingMonth.ToString("MM/yyyy")</div>
-                        }
-                        else
-                        {
-                            <span>#@payment.InvoiceID</span>
-                        }
-                    </td>
-                    <td>@(payment.Invoice?.Contract?.Room?.RoomName ?? "—")</td>
-                    <td>@(payment.Invoice?.Contract?.Tenant?.FullName ?? "—")</td>
-                    <td>@payment.PaymentDate.ToString("dd/MM/yyyy")</td>
-                    <td class="text-nowrap">@payment.Amount.ToString("N0") đ</td>
-                    <td>@payment.PaymentMethod</td>
-                    <td>@(string.IsNullOrWhiteSpace(payment.Note) ? "—" : payment.Note)</td>
-                    <td>
-    <a asp-action="Details"
-       asp-route-id="@payment.PaymentID"
-       class="btn btn-sm btn-outline-info">
-        Chi tiết
-    </a>
-
-    @if (User.IsInRole("Admin") || User.IsInRole("Landlord"))
-    {
-        <a asp-action="Edit"
-           asp-route-id="@payment.PaymentID"
-           class="btn btn-sm btn-outline-primary">Sửa</a>
-
-        <a asp-action="Delete"
-           asp-route-id="@payment.PaymentID"
-           class="btn btn-sm btn-outline-danger">Xóa</a>
+<style>
+    .payment-page {
+        padding: 24px;
+        background: #f5f7fb;
+        min-height: calc(100vh - 160px);
     }
-</td>
-                </tr>
-            }
+
+    .payment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .payment-title {
+        font-size: 27px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 5px;
+    }
+
+    .payment-subtitle {
+        color: #8492a6;
+        font-size: 14px;
+    }
+
+    .payment-btn {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 11px 19px;
+        border-radius: 9px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+    .payment-btn:hover {
+        background: #1d4ed8;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .payment-stat {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 20px;
+        height: 100%;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .stat-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-label {
+        color: #8492a6;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .stat-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 11px;
+        font-size: 20px;
+    }
+
+    .stat-number {
+        font-size: 25px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-top: 15px;
+    }
+
+    .stat-note {
+        color: #98a2b3;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .payment-panel {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 22px;
+        margin-top: 25px;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 18px;
+    }
+
+    .payment-search {
+        max-width: 350px;
+        border-radius: 8px;
+        padding: 10px 13px;
+        border: 1px solid #dce2ea;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .payment-search:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+
+    .payment-table {
+        width: 100%;
+        min-width: 950px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .payment-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 15px 12px;
+        border-bottom: 1px solid #e8edf3;
+        white-space: nowrap;
+    }
+
+    .payment-table tbody td {
+        padding: 16px 12px;
+        border-bottom: 1px solid #edf0f5;
+        font-size: 13px;
+        color: #475569;
+        vertical-align: middle;
+    }
+
+    .payment-table tbody tr:hover {
+        background: #f8fbff;
+    }
+
+    .payment-id {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .payment-money {
+        color: #059669 !important;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .payment-method {
+        background: #eff6ff;
+        color: #2563eb;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .payment-actions {
+        display: flex;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .payment-actions .btn {
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .empty-payment {
+        text-align: center;
+        padding: 45px 15px !important;
+        color: #94a3b8 !important;
+    }
+
+    .empty-icon {
+        font-size: 38px;
+        margin-bottom: 10px;
+    }
+
+    @@media (max-width: 768px) {
+        .payment-page {
+            padding: 14px;
         }
-        </tbody>
-    </table>
+
+        .payment-title {
+            font-size: 22px;
+        }
+
+        .payment-header {
+            align-items: flex-start;
+        }
+
+        .payment-panel {
+            padding: 14px;
+        }
+
+        .payment-search {
+            max-width: 100%;
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="payment-page">
+
+    <!-- TIÊU ĐỀ -->
+    <div class="payment-header">
+        <div>
+            <h1 class="payment-title">
+                @(isTenant ? "Lịch sử thanh toán" : "Quản lý thanh toán")
+            </h1>
+            <div class="payment-subtitle">
+                @(isTenant
+                    ? "Theo dõi các giao dịch thanh toán tiền phòng của bạn."
+                    : "Theo dõi và quản lý các giao dịch thanh toán phòng trọ.")
+            </div>
+        </div>
+
+        @if (isManager)
+        {
+            <a asp-action="Create" class="payment-btn">
+                + Ghi nhận thanh toán
+            </a>
+        }
+    </div>
+
+    <!-- THÔNG BÁO -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            ✓ @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- THỐNG KÊ -->
+    <div class="row g-3">
+
+        <div class="col-12 col-md-4">
+            <div class="payment-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng giao dịch</span>
+                    <span class="stat-icon" style="background:#eff6ff;color:#2563eb;">
+                        ▤
+                    </span>
+                </div>
+                <div class="stat-number">@totalPayments</div>
+                <div class="stat-note">Số giao dịch đã ghi nhận</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="payment-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng tiền đã thanh toán</span>
+                    <span class="stat-icon" style="background:#ecfdf5;color:#059669;">
+                        ₫
+                    </span>
+                </div>
+                <div class="stat-number" style="color:#059669;">
+                    @totalAmount.ToString("N0") đ
+                </div>
+                <div class="stat-note">Tổng giá trị các giao dịch</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="payment-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Trung bình giao dịch</span>
+                    <span class="stat-icon" style="background:#fff7ed;color:#ea580c;">
+                        ◷
+                    </span>
+                </div>
+                <div class="stat-number">
+                    @averageAmount.ToString("N0") đ
+                </div>
+                <div class="stat-note">Giá trị trung bình mỗi giao dịch</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DANH SÁCH THANH TOÁN -->
+    <div class="payment-panel">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+            <div class="panel-title mb-0">
+                Danh sách giao dịch
+            </div>
+
+            <input type="text"
+                   id="paymentSearch"
+                   class="payment-search"
+                   placeholder="⌕ Tìm theo mã, phòng, người thuê..." />
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="payment-table" id="paymentTable">
+
+                <thead>
+                    <tr>
+                        <th>Mã thanh toán</th>
+                        <th>Hóa đơn</th>
+                        <th>Phòng</th>
+
+                        @if (!isTenant)
+                        {
+                            <th>Người thuê</th>
+                        }
+
+                        <th>Ngày thanh toán</th>
+                        <th>Số tiền</th>
+                        <th>Phương thức</th>
+                        <th>Ghi chú</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @if (!payments.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="empty-payment">
+                                <div class="empty-icon">📭</div>
+                                <div class="fw-bold">Chưa có giao dịch thanh toán</div>
+                                <div class="small mt-1">
+                                    Các giao dịch sẽ hiển thị tại đây.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var payment in payments)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="payment-id">
+                                        #@payment.PaymentID
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @if (payment.Invoice != null)
+                                    {
+                                        <a asp-controller="Invoices"
+                                           asp-action="Details"
+                                           asp-route-id="@payment.InvoiceID"
+                                           class="text-decoration-none fw-semibold">
+                                            #@payment.InvoiceID
+                                        </a>
+
+                                        <div class="small text-muted">
+                                            @payment.Invoice.BillingMonth.ToString("MM/yyyy")
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span>#@payment.InvoiceID</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <span class="fw-semibold">
+                                        @(payment.Invoice?.Contract?.Room?.RoomName ?? "—")
+                                    </span>
+                                </td>
+
+                                @if (!isTenant)
+                                {
+                                    <td>
+                                        @(payment.Invoice?.Contract?.Tenant?.FullName ?? "—")
+                                    </td>
+                                }
+
+                                <td class="text-nowrap">
+                                    @payment.PaymentDate.ToString("dd/MM/yyyy")
+                                </td>
+
+                                <td class="payment-money">
+                                    @payment.Amount.ToString("N0") đ
+                                </td>
+
+                                <td>
+                                    <span class="payment-method">
+                                        @(payment.PaymentMethod ?? "Khác")
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(payment.Note)
+                                        ? "—"
+                                        : payment.Note)
+                                </td>
+
+                                <td>
+                                    <div class="payment-actions">
+
+                                        <a asp-action="Details"
+                                           asp-route-id="@payment.PaymentID"
+                                           class="btn btn-sm btn-outline-info">
+                                            Chi tiết
+                                        </a>
+
+                                        @if (isManager)
+                                        {
+                                            <a asp-action="Edit"
+                                               asp-route-id="@payment.PaymentID"
+                                               class="btn btn-sm btn-outline-primary">
+                                                Sửa
+                                            </a>
+
+                                            <a asp-action="Delete"
+                                               asp-route-id="@payment.PaymentID"
+                                               class="btn btn-sm btn-outline-danger">
+                                                Xóa
+                                            </a>
+                                        }
+
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+
+                </tbody>
+            </table>
+
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+            <span class="small text-muted">
+                Tổng cộng: <strong>@totalPayments</strong> giao dịch
+            </span>
+            <span class="small text-muted">
+                SmartRental - Quản lý nhà trọ
+            </span>
+        </div>
+
+    </div>
+
 </div>
+
+<script>
+    document.getElementById("paymentSearch").addEventListener("input", function () {
+        var keyword = this.value.toLowerCase().trim();
+
+        document.querySelectorAll("#paymentTable tbody tr").forEach(function (row) {
+            row.style.display = row.innerText.toLowerCase().includes(keyword)
+                ? ""
+                : "none";
+        });
+    });
+</script>

@@ -1,71 +1,594 @@
+
 @model IEnumerable<RoomRentalManagement.Models.Request>
 
 @{
     ViewData["Title"] = "Quản lý yêu cầu";
+
+    var requests = Model?.ToList() ?? new List<RoomRentalManagement.Models.Request>();
+
+    bool isTenant = User.IsInRole("Tenant");
+    bool isManager = User.IsInRole("Admin") || User.IsInRole("Landlord");
+
+    var totalRequests = requests.Count;
+    var pendingRequests = requests.Count(x =>
+        x.Status != "Resolved" &&
+        x.Status != "Rejected" &&
+        x.Status != "In Progress");
+
+    var processingRequests = requests.Count(x => x.Status == "In Progress");
+    var resolvedRequests = requests.Count(x => x.Status == "Resolved");
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h1 class="h2">Quản lý yêu cầu</h1>
-        <p class="text-muted mb-0">Theo dõi yêu cầu và phản hồi dành cho người thuê.</p>
+<style>
+    .request-page {
+        padding: 24px;
+        background: #f5f7fb;
+        min-height: calc(100vh - 160px);
+    }
+
+    .request-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .request-title {
+        font-size: 27px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-bottom: 5px;
+    }
+
+    .request-subtitle {
+        color: #8492a6;
+        font-size: 14px;
+    }
+
+    .request-create-btn {
+        background: #2563eb;
+        color: white;
+        padding: 11px 19px;
+        border-radius: 9px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+    .request-create-btn:hover {
+        background: #1d4ed8;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .request-stat {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 20px;
+        height: 100%;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .stat-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-label {
+        color: #8492a6;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .stat-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 11px;
+        font-size: 20px;
+    }
+
+    .stat-number {
+        font-size: 26px;
+        font-weight: 700;
+        color: #172b4d;
+        margin-top: 15px;
+    }
+
+    .stat-note {
+        color: #98a2b3;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .request-panel {
+        background: white;
+        border: 1px solid #edf0f5;
+        border-radius: 13px;
+        padding: 22px;
+        margin-top: 25px;
+        box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #172b4d;
+    }
+
+    .request-search {
+        width: 330px;
+        max-width: 100%;
+        padding: 10px 13px;
+        border: 1px solid #dce2ea;
+        border-radius: 8px;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .request-filter {
+        padding: 10px 12px;
+        border: 1px solid #dce2ea;
+        border-radius: 8px;
+        background: white;
+        color: #475569;
+        font-size: 13px;
+    }
+
+    .request-search:focus,
+    .request-filter:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+
+    .request-table {
+        width: 100%;
+        min-width: 1050px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .request-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 15px 12px;
+        border-bottom: 1px solid #e8edf3;
+        white-space: nowrap;
+    }
+
+    .request-table tbody td {
+        padding: 16px 12px;
+        border-bottom: 1px solid #edf0f5;
+        font-size: 13px;
+        color: #475569;
+        vertical-align: middle;
+    }
+
+    .request-table tbody tr:hover {
+        background: #f8fbff;
+    }
+
+    .request-id {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .request-content {
+        max-width: 230px;
+        line-height: 1.6;
+    }
+
+    .request-response {
+        max-width: 200px;
+        line-height: 1.6;
+    }
+
+    .request-status {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .status-pending {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .status-progress {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-resolved {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-rejected {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .status-other {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .request-actions {
+        display: flex;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .request-actions .btn {
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .request-empty {
+        text-align: center;
+        padding: 45px 15px !important;
+        color: #94a3b8 !important;
+    }
+
+    @@media(max-width: 768px) {
+        .request-page {
+            padding: 14px;
+        }
+
+        .request-title {
+            font-size: 22px;
+        }
+
+        .request-panel {
+            padding: 14px;
+        }
+
+        .request-search {
+            width: 100%;
+        }
+
+        .request-header {
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<div class="request-page">
+
+    <!-- TIÊU ĐỀ -->
+    <div class="request-header">
+        <div>
+            <h1 class="request-title">
+                @(isTenant ? "Yêu cầu của tôi" : "Quản lý yêu cầu")
+            </h1>
+
+            <div class="request-subtitle">
+                @(isTenant
+                    ? "Theo dõi yêu cầu và phản hồi từ chủ nhà."
+                    : "Theo dõi, tiếp nhận và xử lý yêu cầu của người thuê.")
+            </div>
+        </div>
+
+        <a asp-action="Create" class="request-create-btn">
+            + Tạo yêu cầu
+        </a>
     </div>
-    <a asp-action="Create" class="btn btn-primary">+ Tạo yêu cầu</a>
+
+    <!-- THÔNG BÁO -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            ✓ @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- THỐNG KÊ -->
+    <div class="row g-3">
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="request-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Tổng yêu cầu</span>
+                    <span class="stat-icon" style="background:#eff6ff;color:#2563eb;">
+                        📋
+                    </span>
+                </div>
+                <div class="stat-number">@totalRequests</div>
+                <div class="stat-note">Tổng yêu cầu đã gửi</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="request-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Chờ xử lý</span>
+                    <span class="stat-icon" style="background:#fff7ed;color:#ea580c;">
+                        ◷
+                    </span>
+                </div>
+                <div class="stat-number" style="color:#ea580c;">
+                    @pendingRequests
+                </div>
+                <div class="stat-note">Yêu cầu đang chờ tiếp nhận</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="request-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Đang xử lý</span>
+                    <span class="stat-icon" style="background:#eff6ff;color:#2563eb;">
+                        ⚙
+                    </span>
+                </div>
+                <div class="stat-number" style="color:#2563eb;">
+                    @processingRequests
+                </div>
+                <div class="stat-note">Yêu cầu đang được giải quyết</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="request-stat">
+                <div class="stat-top">
+                    <span class="stat-label">Đã giải quyết</span>
+                    <span class="stat-icon" style="background:#ecfdf5;color:#059669;">
+                        ✓
+                    </span>
+                </div>
+                <div class="stat-number" style="color:#059669;">
+                    @resolvedRequests
+                </div>
+                <div class="stat-note">Yêu cầu đã hoàn thành</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DANH SÁCH YÊU CẦU -->
+    <div class="request-panel">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+
+            <div class="panel-title">
+                Danh sách yêu cầu
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+
+                <input type="text"
+                       id="requestSearch"
+                       class="request-search"
+                       placeholder="⌕ Tìm mã, người thuê, nội dung..." />
+
+                <select id="requestStatusFilter" class="request-filter">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="pending">Chờ xử lý</option>
+                    <option value="progress">Đang xử lý</option>
+                    <option value="resolved">Đã giải quyết</option>
+                    <option value="rejected">Từ chối</option>
+                    <option value="other">Khác</option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="request-table" id="requestTable">
+
+                <thead>
+                    <tr>
+                        <th>Mã yêu cầu</th>
+
+                        @if (!isTenant)
+                        {
+                            <th>Người thuê</th>
+                        }
+
+                        <th>Nội dung yêu cầu</th>
+                        <th>Ngày tạo</th>
+                        <th>Trạng thái</th>
+                        <th>Phản hồi</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @if (requests.Any())
+                    {
+                        @foreach (var item in requests)
+                        {
+                            var content = item.Content ?? "";
+                            var response = item.Response ?? "";
+
+                            var statusLabel = item.Status switch
+                            {
+                                "Resolved" => "Đã giải quyết",
+                                "Rejected" => "Đã từ chối",
+                                "In Progress" => "Đang xử lý",
+                                _ => string.IsNullOrWhiteSpace(item.Status)
+                                    ? "Chờ xử lý"
+                                    : item.Status
+                            };
+
+                            var statusClass = item.Status switch
+                            {
+                                "Resolved" => "status-resolved",
+                                "Rejected" => "status-rejected",
+                                "In Progress" => "status-progress",
+                                "Pending" => "status-pending",
+                                _ => "status-other"
+                            };
+
+                            var filterStatus = item.Status switch
+                            {
+                                "Resolved" => "resolved",
+                                "Rejected" => "rejected",
+                                "In Progress" => "progress",
+                                "Pending" => "pending",
+                                _ => "other"
+                            };
+
+                            <tr data-status="@filterStatus">
+
+                                <td>
+                                    <span class="request-id">
+                                        #@item.RequestID
+                                    </span>
+                                </td>
+
+                                @if (!isTenant)
+                                {
+                                    <td>
+                                        <span class="fw-semibold">
+                                            Người thuê #@item.TenantID
+                                        </span>
+                                    </td>
+                                }
+
+                                <td>
+                                    <div class="request-content"
+                                         title="@content">
+                                        @(content.Length > 80
+                                            ? content.Substring(0, 80) + "…"
+                                            : content)
+                                    </div>
+                                </td>
+
+                                <td class="text-nowrap">
+                                    @item.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+
+                                <td>
+                                    <span class="request-status @statusClass">
+                                        @statusLabel
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="request-response"
+                                         title="@response">
+                                        @(string.IsNullOrWhiteSpace(response)
+                                            ? "Chưa phản hồi"
+                                            : response.Length > 60
+                                                ? response.Substring(0, 60) + "…"
+                                                : response)
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="request-actions">
+
+                                        <a asp-action="Details"
+                                           asp-route-id="@item.RequestID"
+                                           class="btn btn-sm btn-outline-info">
+                                            Chi tiết
+                                        </a>
+
+                                        @if (isManager)
+                                        {
+                                            <a asp-action="Edit"
+                                               asp-route-id="@item.RequestID"
+                                               class="btn btn-sm btn-outline-primary">
+                                                Xử lý
+                                            </a>
+
+                                            <a asp-action="Delete"
+                                               asp-route-id="@item.RequestID"
+                                               class="btn btn-sm btn-outline-danger">
+                                                Xóa
+                                            </a>
+                                        }
+
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="request-empty">
+                                <div style="font-size:38px;">📭</div>
+
+                                <div class="fw-bold mt-2">
+                                    @(isTenant
+                                        ? "Bạn chưa có yêu cầu nào"
+                                        : "Chưa có yêu cầu nào trong hệ thống")
+                                </div>
+
+                                <div class="small mt-1">
+                                    Các yêu cầu sẽ được hiển thị tại đây.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+
+            <span class="small text-muted">
+                Tổng cộng: <strong>@totalRequests</strong> yêu cầu
+            </span>
+
+            <span class="small text-muted">
+                SmartRental - Quản lý nhà trọ
+            </span>
+
+        </div>
+
+    </div>
+
 </div>
 
-@if (Model.Any())
-{
-    <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Mã yêu cầu</th>
-                    <th>Người thuê</th>
-                    <th>Nội dung</th>
-                    <th>Ngày tạo</th>
-                    <th>Trạng thái</th>
-                    <th>Phản hồi</th>
-                    <th class="text-end">Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td>@item.RequestID</td>
-                    <td>Người thuê #@item.TenantID</td>
-                    <td class="text-break">@(item.Content.Length > 80 ? item.Content.Substring(0, 80) + "…" : item.Content)</td>
-                    <td>@item.CreatedDate.ToString("dd/MM/yyyy HH:mm")</td>
-                    <td>
-                        @if (item.Status == "Resolved")
-                        {
-                            <span class="badge bg-success">@item.Status</span>
-                        }
-                        else if (item.Status == "Rejected")
-                        {
-                            <span class="badge bg-danger">@item.Status</span>
-                        }
-                        else if (item.Status == "In Progress")
-                        {
-                            <span class="badge bg-info text-dark">@item.Status</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-warning text-dark">@item.Status</span>
-                        }
-                    </td>
-                    <td class="text-break">@(string.IsNullOrWhiteSpace(item.Response) ? "Chưa phản hồi" : (item.Response.Length > 60 ? item.Response.Substring(0, 60) + "…" : item.Response))</td>
-                    <td class="text-end text-nowrap">
-                        <a asp-action="Details" asp-route-id="@item.RequestID" class="btn btn-sm btn-outline-info">Chi tiết</a>
-                        <a asp-action="Edit" asp-route-id="@item.RequestID" class="btn btn-sm btn-outline-primary">Sửa</a>
-                        <a asp-action="Delete" asp-route-id="@item.RequestID" class="btn btn-sm btn-outline-danger">Xóa</a>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    </div>
-}
-else
-{
-    <div class="alert alert-info">Chưa có yêu cầu nào. Hãy chọn “Tạo yêu cầu” để thêm bản ghi đầu tiên.</div>
-}
+<script>
+    const requestSearch = document.getElementById("requestSearch");
+    const requestStatusFilter = document.getElementById("requestStatusFilter");
+
+    function filterRequests() {
+        const keyword = requestSearch.value.toLowerCase().trim();
+        const status = requestStatusFilter.value;
+
+        document.querySelectorAll("#requestTable tbody tr[data-status]")
+            .forEach(row => {
+                const matchesKeyword = row.innerText.toLowerCase().includes(keyword);
+                const matchesStatus = !status || row.dataset.status === status;
+
+                row.style.display = matchesKeyword && matchesStatus ? "" : "none";
+            });
+    }
+
+    requestSearch.addEventListener("input", filterRequests);
+    requestStatusFilter.addEventListener("change", filterRequests);
+</script>
