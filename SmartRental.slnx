@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RoomRentalManagement/RoomRentalManagement.csproj" />
+  <Project Path="SmartRental.Desktop/SmartRental.Desktop.csproj" />
+</Solution>
